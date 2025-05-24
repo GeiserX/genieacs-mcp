@@ -14,7 +14,6 @@ To configure with Clients:
   "api": {
     "type": "jsonrpc-mcp",
     "url":  "http://localhost:8080/mcp",
-    "protocol": "2.0",
     "init_method": "initialize",
     "session_header": "Mcp-Session-Id"
   },
