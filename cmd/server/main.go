@@ -235,8 +235,7 @@ func main() {
 		return mcp.NewToolResultText(fmt.Sprintf("Refresh task queued/processed. Raw ACS response: %s", string(resp))), nil
 	})
 
-	httpSrv := server.NewStreamableHTTPServer(s) // optional: WithHTTPContextFunc(...)
-
+	httpSrv := server.NewStreamableHTTPServer(s)
 	log.Println("GenieACS MCP bridge listening on :8080")
 	if err := httpSrv.Start(":8080"); err != nil {
 		log.Fatalf("server error: %v", err)
