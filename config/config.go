@@ -1,6 +1,15 @@
 package config
 
-import "os"
+import (
+	"os"
+
+	"github.com/joho/godotenv"
+)
+
+func init() {
+	// Load .env in the working directory; ignore error if the file is absent.
+	_ = godotenv.Load()
+}
 
 type ACSConfig struct {
 	BaseURL string
