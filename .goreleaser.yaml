@@ -29,9 +29,11 @@ checksum:
 
 dockers:
   - image_templates:
-      - 'drumsergio/genieacs-mcp:{{ .Tag }}'
-      - 'drumsergio/genieacs-mcp:latest'
+      - "drumsergio/genieacs-mcp:{{ .Tag }}-{{ .Arch }}"
+      - "drumsergio/genieacs-mcp:latest-{{ .Arch }}"
     dockerfile: Dockerfile
+    goos: linux
+    goarch: [amd64, arm64]
     use: buildx
     build_flag_templates:
       - "--platform=linux/{{ .Arch }}"
