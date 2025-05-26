@@ -1,0 +1,51 @@
+project_name: genieacs-mcp
+release:
+  github:
+    owner: GeiserX
+    name: genieacs-mcp
+  draft: false
+  prerelease: auto # tag “v0.3.0-rc1” becomes pre-release
+
+builds:
+  - id: bin
+    main: ./cmd/server
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+      - -X github.com/geiserx/genieacs-mcp/version.Version={{ .Version }}
+      - -X github.com/geiserx/genieacs-mcp/version.Commit={{ .ShortCommit }}
+      - -X github.com/geiserx/genieacs-mcp/version.Date={{ .Date }}
+
+archives:
+  - id: dist
+    builds: [bin]
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+dockers:
+  - image_templates:
+      - 'drumsergio/genieacs-mcp:{{ .Tag }}'
+      - 'drumsergio/genieacs-mcp:latest'
+    dockerfile: Dockerfile
+    use: buildx
+    multiarch: true
+    build_flag_templates:
+      - "--platform=linux/{{ .Arch }}"
+    login: true
+    username: '{{ .Env.DOCKER_USERNAME }}'
+    password: '{{ .Env.DOCKER_PASSWORD }}'
+
+snapshot:
+  name_template: "snapshot-{{ .ShortCommit }}"
+
+changelog:
+  groups:
+    - title: "🚀 Features"
+      regexp: '^feat'
+    - title: "🐛 Fixes"
+      regexp: '^fix'
