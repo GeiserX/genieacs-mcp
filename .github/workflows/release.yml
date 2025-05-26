@@ -16,7 +16,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
       - uses: goreleaser/goreleaser-action@v5
         with:
-          distribution: goreleaser
+          distribution: goreleaser-next
           version: latest
           args: release --clean
         env:
