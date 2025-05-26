@@ -14,7 +14,7 @@ _A tiny bridge that exposes any GenieACS instance as an **MCP v1**
 | Type            | What for                                                                   | MCP URI / Tool id                |
 |-----------------|----------------------------------------------------------------------------|----------------------------------|
 | **Resources**   | Consume GenieACS data read-only                                            | `genieacs://device/{id}`<br>`genieacs://file/{name}`<br>`genieacs://tasks/{id}`<br>`genieacs://devices/list` |
-| **Tools**       | Invoke actions on a CPE through GenieACS                                   | `reboot_device` · `download_firmware` · `refresh_parameter` |
+| **Tools**       | Invoke actions on a CPE through GenieACS                                   | `reboot_device`<br>`download_firmware`<br>`refresh_parameter` |
 
 Everything is exposed over a single JSON-RPC endpoint (`/mcp`).  
 LLMs / Agents can: `initialize → readResource → listTools → callTool` … and so on.
@@ -39,9 +39,10 @@ go run ./cmd/server
 
 ## 🔧 Configuration
 | Variable | Default | Description |
-| ACS_URL | http://localhost:7557 | GenieACS NBI endpoint (without trailing /) |
-| ACS_USER | admin | GenieACS username |
-| ACS_PASS | admin | GenieACS password |
+|----------|---------|-------------|
+| `ACS_URL` | http://localhost:7557 | GenieACS NBI endpoint (without trailing /) |
+| `ACS_USER` | admin | GenieACS username |
+| `ACS_PASS` | admin | GenieACS password |
 
 Put them in a `.env` file (from `.env.example`) or set them in the environment. 
 
