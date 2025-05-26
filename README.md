@@ -70,7 +70,9 @@ Put them in a `.env` file (from `.env.example`) or set them in the environment.
 
 ## Credits
 [GenieACS](https://github.com/genieacs/genieacs) – the best open-source ACS
+
 [MCP-GO](https://github.com/mark3labs/mcp-go) – modern MCP implementation
+
 [GoReleaser](https://goreleaser.com/) – painless multi-arch releases
 
 ## Maintainers
