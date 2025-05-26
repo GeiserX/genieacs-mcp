@@ -28,15 +28,26 @@ checksum:
   name_template: 'checksums.txt'
 
 dockers:
+  # ------------- amd64 -------------
   - image_templates:
-      - "drumsergio/genieacs-mcp:{{ .Tag }}-{{ .Arch }}"
-      - "drumsergio/genieacs-mcp:latest-{{ .Arch }}"
+      - "drumsergio/genieacs-mcp:{{ .Tag }}-amd64"
+      - "drumsergio/genieacs-mcp:latest-amd64"
     dockerfile: Dockerfile
-    goos: linux
-    goarch: [amd64, arm64]
-    use: buildx
+    goos:   linux
+    goarch: amd64
+    use:    buildx
     build_flag_templates:
-      - "--platform=linux/{{ .Arch }}"
+      - "--platform=linux/amd64"
+  # ------------- arm64 -------------
+  - image_templates:
+      - "drumsergio/genieacs-mcp:{{ .Tag }}-arm64"
+      - "drumsergio/genieacs-mcp:latest-arm64"
+    dockerfile: Dockerfile
+    goos:   linux
+    goarch: arm64
+    use:    buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
 
 docker_manifests:
   # stitch the per-arch images into a combined tag = multi-arch
