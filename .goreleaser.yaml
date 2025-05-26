@@ -37,7 +37,14 @@ dockers:
     goarch: amd64
     use:    buildx
     extra_files:
-      - . 
+      - go.mod
+      - go.sum
+      - cmd/
+      - internal/
+      - client/
+      - config/
+      - version/
+      - .goreleaser.yaml
     build_flag_templates:
       - "--platform=linux/amd64"
   # ------------- arm64 -------------
@@ -49,7 +56,14 @@ dockers:
     goarch: arm64
     use:    buildx
     extra_files:
-      - . 
+      - go.mod
+      - go.sum
+      - cmd/
+      - internal/
+      - client/
+      - config/
+      - version/
+      - .goreleaser.yaml
     build_flag_templates:
       - "--platform=linux/arm64"
 
