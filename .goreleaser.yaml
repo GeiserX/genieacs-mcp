@@ -35,9 +35,6 @@ dockers:
     use: buildx
     build_flag_templates:
       - "--platform=linux/{{ .Arch }}"
-    login: true
-    username: '{{ .Env.DOCKER_USERNAME }}'
-    password: '{{ .Env.DOCKER_PASSWORD }}'
 
 docker_manifests:
   # stitch the per-arch images into a combined tag = multi-arch
