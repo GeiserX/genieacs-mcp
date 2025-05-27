@@ -46,6 +46,12 @@ go run ./cmd/server
 
 Put them in a `.env` file (from `.env.example`) or set them in the environment. 
 
+
+## Testing
+Tested with [Inspector](https://modelcontextprotocol.io/docs/tools/inspector) and it is currently fully working. Before making a PR, make sure this MCP server behaves well via this medium.
+
+Lacks Testing with actual MCP clients (client LLMs), so please, submit your PRs to improve descriptions in case it fails to adequately match the services offered by this MCP server.
+
 ## Example configuration for client LLMs:
 
 ```json
