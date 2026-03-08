@@ -72,7 +72,7 @@ Lacks Testing with actual MCP clients (client LLMs), so please, submit your PRs 
     "init_method": "initialize",
     "session_header": "Mcp-Session-Id"
   },
-  "logo_url": "https://raw.githubusercontent.com/geiserx/genieacs-docker/main/extra/logo.png",
+  "logo_url": "https://raw.githubusercontent.com/GeiserX/genieacs-docker/master/extra/logo.png",
   "contact_email": "acsdesk@protonmail.com",
   "legal_info_url": "https://github.com/GeiserX/genieacs-mcp/blob/main/LICENSE"
 }
@@ -91,6 +91,6 @@ Lacks Testing with actual MCP clients (client LLMs), so please, submit your PRs 
 
 ## Contributing
 
-Feel free to dive in! [Open an issue](https://github.com/GeiserX/genieacs-docker/issues/new) or submit PRs.
+Feel free to dive in! [Open an issue](https://github.com/GeiserX/genieacs-mcp/issues/new) or submit PRs.
 
-GenieACS-Docker follows the [Contributor Covenant](http://contributor-covenant.org/version/2/1/) Code of Conduct.
+GenieACS-MCP follows the [Contributor Covenant](http://contributor-covenant.org/version/2/1/) Code of Conduct.
