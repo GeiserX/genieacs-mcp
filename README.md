@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/banner.svg" alt="GenieACS MCP banner" width="900"/>
+</p>
+
 # GenieACS-MCP
 
 _A tiny bridge that exposes any GenieACS instance as an **MCP v1**
