@@ -7,9 +7,7 @@
 _A tiny bridge that exposes any GenieACS instance as an **MCP v1**
 (JSON-RPC for LLMs) server written in Go._
 
-![Go](https://img.shields.io/badge/Go-1.24-blue)  
-![Docker Image](https://img.shields.io/docker/pulls/drumsergio/genieacs-mcp)  
-![GitHub license](https://img.shields.io/github/license/GeiserX/genieacs-mcp)
+![Go](https://img.shields.io/badge/Go-1.24-blue) [![Docker Pulls](https://img.shields.io/docker/pulls/drumsergio/genieacs-mcp)](https://hub.docker.com/r/drumsergio/genieacs-mcp) [![GitHub Stars](https://img.shields.io/github/stars/GeiserX/genieacs-mcp)](https://github.com/GeiserX/genieacs-mcp/stargazers) [![License](https://img.shields.io/github/license/GeiserX/genieacs-mcp)](https://github.com/GeiserX/genieacs-mcp/blob/main/LICENSE)
 
 ---
 
