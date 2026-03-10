@@ -2,12 +2,16 @@
   <img src="docs/images/banner.svg" alt="GenieACS MCP banner" width="900"/>
 </p>
 
-# GenieACS-MCP
+<h1 align="center">GenieACS-MCP</h1>
 
-_A tiny bridge that exposes any GenieACS instance as an **MCP v1**
-(JSON-RPC for LLMs) server written in Go._
+<p align="center">
+  <img src="https://img.shields.io/badge/Go-1.24-blue?style=flat-square&logo=go&logoColor=white" alt="Go"/>
+  <a href="https://hub.docker.com/r/drumsergio/genieacs-mcp"><img src="https://img.shields.io/docker/pulls/drumsergio/genieacs-mcp?style=flat-square&logo=docker" alt="Docker Pulls"/></a>
+  <a href="https://github.com/GeiserX/genieacs-mcp/stargazers"><img src="https://img.shields.io/github/stars/GeiserX/genieacs-mcp?style=flat-square&logo=github" alt="GitHub Stars"/></a>
+  <a href="https://github.com/GeiserX/genieacs-mcp/blob/main/LICENSE"><img src="https://img.shields.io/github/license/GeiserX/genieacs-mcp?style=flat-square" alt="License"/></a>
+</p>
 
-![Go](https://img.shields.io/badge/Go-1.24-blue?style=flat-square&logo=go&logoColor=white) [![Docker Pulls](https://img.shields.io/docker/pulls/drumsergio/genieacs-mcp?style=flat-square&logo=docker)](https://hub.docker.com/r/drumsergio/genieacs-mcp) [![GitHub Stars](https://img.shields.io/github/stars/GeiserX/genieacs-mcp?style=flat-square&logo=github)](https://github.com/GeiserX/genieacs-mcp/stargazers) [![License](https://img.shields.io/github/license/GeiserX/genieacs-mcp?style=flat-square)](https://github.com/GeiserX/genieacs-mcp/blob/main/LICENSE)
+<p align="center"><strong>A tiny bridge that exposes any GenieACS instance as an MCP v1 (JSON-RPC for LLMs) server written in Go.</strong></p>
 
 ---
 
