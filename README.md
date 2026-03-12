@@ -50,6 +50,7 @@ go run ./cmd/server
 | `ACS_URL` | http://localhost:7557 | GenieACS NBI endpoint (without trailing /) |
 | `ACS_USER` | admin | GenieACS username |
 | `ACS_PASS` | admin | GenieACS password |
+| `TRANSPORT` | _(empty = HTTP)_ | Set to `stdio` for stdio transport |
 
 Put them in a `.env` file (from `.env.example`) or set them in the environment. 
 

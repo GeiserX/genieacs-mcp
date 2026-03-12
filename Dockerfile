@@ -40,5 +40,6 @@ EXPOSE 8080
 ENV ACS_URL=http://genieacs:7557
 ENV ACS_USER=admin
 ENV ACS_PASS=admin
+ENV TRANSPORT=stdio
 
 ENTRYPOINT ["/usr/local/bin/genieacs-mcp"]

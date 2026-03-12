@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"log"
+	"os"
+	"strings"
 
 	"github.com/geiserx/genieacs-mcp/client"
 	"github.com/geiserx/genieacs-mcp/config"
@@ -62,9 +65,18 @@ func main() {
 	tool, handler = tools.NewRefreshParameter(acs)
 	s.AddTool(tool, handler)
 
-	httpSrv := server.NewStreamableHTTPServer(s)
-	log.Println("GenieACS MCP bridge listening on :8080")
-	if err := httpSrv.Start(":8080"); err != nil {
-		log.Fatalf("server error: %v", err)
+	transport := strings.ToLower(os.Getenv("TRANSPORT"))
+	if transport == "stdio" {
+		stdioSrv := server.NewStdioServer(s)
+		log.Println("GenieACS MCP bridge running on stdio")
+		if err := stdioSrv.Listen(context.Background(), os.Stdin, os.Stdout); err != nil {
+			log.Fatalf("stdio server error: %v", err)
+		}
+	} else {
+		httpSrv := server.NewStreamableHTTPServer(s)
+		log.Println("GenieACS MCP bridge listening on :8080")
+		if err := httpSrv.Start(":8080"); err != nil {
+			log.Fatalf("server error: %v", err)
+		}
 	}
 }
