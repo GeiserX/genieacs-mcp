@@ -13,6 +13,10 @@
 
 <p align="center"><strong>A tiny bridge that exposes any GenieACS instance as an MCP v1 (JSON-RPC for LLMs) server written in Go.</strong></p>
 
+<a href="https://glama.ai/mcp/servers/GeiserX/genieacs-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/GeiserX/genieacs-mcp/badge" alt="genieacs-mcp MCP server" />
+</a>
+
 ---
 
 ## ✨ What you get
