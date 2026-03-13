@@ -1,0 +1,34 @@
+{
+  "name": "genieacs-mcp",
+  "version": "0.0.9",
+  "description": "MCP server that bridges any GenieACS (TR-069 ACS) instance, exposing device data, firmware management, and CPE actions over JSON-RPC",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GeiserX/genieacs-mcp"
+  },
+  "homepage": "https://github.com/GeiserX/genieacs-mcp",
+  "author": "GeiserX",
+  "keywords": [
+    "mcp",
+    "genieacs",
+    "tr-069",
+    "acs",
+    "cwmp",
+    "cpe",
+    "model-context-protocol"
+  ],
+  "bin": {
+    "genieacs-mcp": "./run.js"
+  },
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "files": [
+    "run.js",
+    "postinstall.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
