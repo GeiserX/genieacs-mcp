@@ -5,6 +5,7 @@
 <h1 align="center">GenieACS-MCP</h1>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/genieacs-mcp"><img src="https://img.shields.io/npm/v/genieacs-mcp?style=flat-square&logo=npm" alt="npm"/></a>
   <img src="https://img.shields.io/badge/Go-1.24-blue?style=flat-square&logo=go&logoColor=white" alt="Go"/>
   <a href="https://hub.docker.com/r/drumsergio/genieacs-mcp"><img src="https://img.shields.io/docker/pulls/drumsergio/genieacs-mcp?style=flat-square&logo=docker" alt="Docker Pulls"/></a>
   <a href="https://github.com/GeiserX/genieacs-mcp/stargazers"><img src="https://img.shields.io/github/stars/GeiserX/genieacs-mcp?style=flat-square&logo=github" alt="GitHub Stars"/></a>
@@ -31,6 +32,21 @@ LLMs / Agents can: `initialize → readResource → listTools → callTool` … 
 ## 🚀 Quick-start (Docker Compose)
 
 Follow instructions from https://github.com/GeiserX/genieacs-docker, it is included in the docker compose file there.
+
+## 📦 Install via npm (stdio transport)
+
+```sh
+npx genieacs-mcp
+```
+
+Or install globally:
+
+```sh
+npm install -g genieacs-mcp
+genieacs-mcp
+```
+
+This downloads the pre-built Go binary for your platform and runs it with stdio transport, compatible with any MCP client.
 
 ## 🛠 Local build
 

@@ -5,7 +5,7 @@
   "license": "GPL-3.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/GeiserX/genieacs-mcp"
+    "url": "git+https://github.com/GeiserX/genieacs-mcp.git"
   },
   "homepage": "https://github.com/GeiserX/genieacs-mcp",
   "author": "GeiserX",
@@ -19,7 +19,7 @@
     "model-context-protocol"
   ],
   "bin": {
-    "genieacs-mcp": "./run.js"
+    "genieacs-mcp": "run.js"
   },
   "scripts": {
     "postinstall": "node postinstall.js"
