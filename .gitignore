@@ -25,5 +25,5 @@ go.work.sum
 .env
 
 dist/
-npm/bin/
+bin/
 node_modules/

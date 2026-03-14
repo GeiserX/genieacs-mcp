@@ -1,6 +1,6 @@
 {
   "name": "genieacs-mcp",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "MCP server that bridges any GenieACS (TR-069 ACS) instance, exposing device data, firmware management, and CPE actions over JSON-RPC",
   "license": "GPL-3.0",
   "repository": {
