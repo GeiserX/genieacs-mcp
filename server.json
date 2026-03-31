@@ -38,37 +38,6 @@
           "isSecret": true
         }
       ]
-    },
-    {
-      "registryType": "docker",
-      "identifier": "drumsergio/genieacs-mcp",
-      "version": "0.0.11",
-      "transport": {
-        "type": "stdio"
-      },
-      "environmentVariables": [
-        {
-          "name": "ACS_URL",
-          "description": "GenieACS NBI API URL (e.g. http://genieacs:7557)",
-          "isRequired": true,
-          "format": "string",
-          "isSecret": false
-        },
-        {
-          "name": "ACS_USER",
-          "description": "GenieACS NBI basic-auth username",
-          "isRequired": false,
-          "format": "string",
-          "isSecret": false
-        },
-        {
-          "name": "ACS_PASS",
-          "description": "GenieACS NBI basic-auth password",
-          "isRequired": false,
-          "format": "string",
-          "isSecret": true
-        }
-      ]
     }
   ]
 }
