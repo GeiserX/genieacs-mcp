@@ -34,7 +34,7 @@ LLMs / Agents can: `initialize → readResource → listTools → callTool` … 
 
 ## 🚀 Quick-start (Docker Compose)
 
-Follow instructions from https://github.com/GeiserX/genieacs-docker, it is included in the docker compose file there.
+Follow instructions from https://github.com/GeiserX/genieacs-container, it is included in the docker compose file there.
 
 ## 📦 Install via npm (stdio transport)
 
@@ -95,7 +95,7 @@ Lacks Testing with actual MCP clients (client LLMs), so please, submit your PRs 
     "init_method": "initialize",
     "session_header": "Mcp-Session-Id"
   },
-  "logo_url": "https://raw.githubusercontent.com/GeiserX/genieacs-docker/master/extra/logo.png",
+  "logo_url": "https://raw.githubusercontent.com/GeiserX/genieacs-container/master/extra/logo.png",
   "contact_email": "acsdesk@protonmail.com",
   "legal_info_url": "https://github.com/GeiserX/genieacs-mcp/blob/main/LICENSE"
 }
