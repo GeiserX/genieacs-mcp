@@ -13,6 +13,7 @@
   <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Official%20Registry-E6522C?style=flat-square" alt="Official MCP Registry"/></a>
   <a href="https://glama.ai/mcp/servers/GeiserX/genieacs-mcp"><img src="https://img.shields.io/badge/Glama-MCP%20Server-8A2BE2?style=flat-square" alt="Glama MCP Server"/></a>
   <a href="https://mcpservers.org/servers/geiserx/genieacs-mcp"><img src="https://img.shields.io/badge/MCPServers.org-listed-green?style=flat-square" alt="MCPServers.org"/></a>
+  <a href="https://mcp.so/server/genieacs-mcp"><img src="https://img.shields.io/badge/mcp.so-listed-blue?style=flat-square" alt="mcp.so"/></a>
 </p>
 
 <p align="center"><strong>A tiny bridge that exposes any GenieACS instance as an MCP v1 (JSON-RPC for LLMs) server written in Go.</strong></p>
