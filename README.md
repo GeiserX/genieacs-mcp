@@ -121,6 +121,19 @@ Feel free to dive in! [Open an issue](https://github.com/GeiserX/genieacs-mcp/is
 
 GenieACS-MCP follows the [Contributor Covenant](http://contributor-covenant.org/version/2/1/) Code of Conduct.
 
+## GenieACS Ecosystem
+
+This project is part of a broader set of tools for working with GenieACS:
+
+| Project | Type | Description |
+|---------|------|-------------|
+| [genieacs-docker](https://github.com/GeiserX/genieacs-docker) | Docker + Helm | Production-ready multi-arch Docker image and Helm chart |
+| [genieacs-ansible](https://github.com/GeiserX/genieacs-ansible) | Ansible Collection | Dynamic inventory plugin and device management modules |
+| [genieacs-ha](https://github.com/GeiserX/genieacs-ha) | HA Integration | Home Assistant integration for TR-069 monitoring |
+| [n8n-nodes-genieacs](https://github.com/GeiserX/n8n-nodes-genieacs) | n8n Node | Workflow automation for GenieACS |
+| [genieacs-services](https://github.com/GeiserX/genieacs-services) | Service Defs | Systemd/Supervisord service definitions |
+| [genieacs-sim-docker](https://github.com/GeiserX/genieacs-sim-docker) | Simulator | Docker-based GenieACS simulator for testing |
+
 ## Other MCP Servers by GeiserX
 
 - [cashpilot-mcp](https://github.com/GeiserX/cashpilot-mcp) — Passive income monitoring
