@@ -6,12 +6,12 @@
     "url": "https://github.com/GeiserX/genieacs-mcp",
     "source": "github"
   },
-  "version": "0.0.12",
+  "version": "0.1.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "genieacs-mcp",
-      "version": "0.0.11",
+      "version": "0.1.0",
       "transport": {
         "type": "stdio"
       },
@@ -41,7 +41,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "drumsergio/genieacs-mcp:v0.0.11",
+      "identifier": "drumsergio/genieacs-mcp:v0.1.0",
       "transport": {
         "type": "stdio"
       },

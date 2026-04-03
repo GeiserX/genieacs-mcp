@@ -27,3 +27,4 @@ go.work.sum
 dist/
 bin/
 node_modules/
+.mcpregistry_*
