@@ -1,0 +1,9 @@
+description: "MCP Server for GenieACS written in Go. A tiny bridge that exposes any GenieACS instance as an MCP server, enabling LLMs to interact with network infrastructure."
+personalNote: "I released it in the same month MCP became a thing, just to test the protocol out. But still, useful for GenieACS operators."
+dockerImage: "drumsergio/genieacs-mcp"
+keyFeatures:
+  - "Expose GenieACS data as MCP resources"
+  - "Invoke actions on CPE devices through GenieACS"
+  - "LLM-friendly JSON-RPC interface"
+  - "Docker support"
+techStack: "Go, MCP, Docker"
