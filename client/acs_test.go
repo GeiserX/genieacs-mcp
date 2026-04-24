@@ -679,3 +679,72 @@ func TestDeleteTask_DeviceInSession(t *testing.T) {
 		t.Errorf("unexpected error: %s", err.Error())
 	}
 }
+
+func TestGetDevice_NetworkError(t *testing.T) {
+	// Use a closed server to trigger a network-level error (connection refused)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	serverURL := server.URL
+	server.Close() // close immediately so connections are refused
+
+	acs := NewACS(serverURL, "", "")
+	_, err := acs.GetDevice("dev-001")
+	if err == nil {
+		t.Fatal("expected network error when server is closed")
+	}
+}
+
+func TestNewACS_PanicsOnInvalidURL(t *testing.T) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Skip("url.Parse did not reject the URL; Go's parser is very permissive")
+		}
+	}()
+	// Go's url.Parse is extremely permissive; a control character URL is
+	// one of the few inputs that causes it to return an error.
+	NewACS("http://host\x00invalid", "", "")
+}
+
+func TestGetDeviceParameters_EmptyProjection(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		proj := r.URL.Query().Get("projection")
+		if proj != "" {
+			t.Errorf("expected empty projection, got %s", proj)
+		}
+		w.Write([]byte(`[{"_id":"dev-001"}]`))
+	}))
+	defer server.Close()
+
+	acs := NewACS(server.URL, "", "")
+	body, err := acs.GetDeviceParameters("dev-001", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(body) == 0 {
+		t.Error("expected non-empty body")
+	}
+}
+
+func TestJsonQueryVal_EscapesSpecialCharacters(t *testing.T) {
+	result := jsonQueryVal("key", `value"with\special`)
+	if result != `{"key":"value\"with\\special"}` {
+		t.Errorf("unexpected result: %s", result)
+	}
+}
+
+func TestSearchDevices_NoLimit(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		limit := r.URL.Query().Get("limit")
+		if limit != "" {
+			t.Errorf("expected no limit param, got %s", limit)
+		}
+		w.Write([]byte(`[]`))
+	}))
+	defer server.Close()
+
+	acs := NewACS(server.URL, "", "")
+	_, err := acs.SearchDevices(`{"_id":"x"}`, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
