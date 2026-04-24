@@ -6,7 +6,7 @@
     "url": "https://github.com/GeiserX/genieacs-mcp",
     "source": "github"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "packages": [
     {
       "registryType": "npm",
@@ -36,6 +36,13 @@
           "isRequired": false,
           "format": "string",
           "isSecret": true
+        },
+        {
+          "name": "DEVICE_LIMIT",
+          "description": "Max devices returned by genieacs://devices/list (default 500)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
         }
       ]
     },
@@ -66,6 +73,13 @@
           "isRequired": false,
           "format": "string",
           "isSecret": true
+        },
+        {
+          "name": "DEVICE_LIMIT",
+          "description": "Max devices returned by genieacs://devices/list (default 500)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
         }
       ]
     }

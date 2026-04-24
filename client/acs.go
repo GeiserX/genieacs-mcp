@@ -134,3 +134,133 @@ func (c *ACSClient) RefreshParameter(deviceID, paramName string) ([]byte, error)
 	}
 	return c.postTask(deviceID, task)
 }
+
+// put sends a PUT request with the given body and content type.
+func (c *ACSClient) put(path string, body []byte, contentType string) ([]byte, error) {
+	endpoint := c.buildURL(path, nil)
+	req, _ := http.NewRequest("PUT", endpoint, bytes.NewReader(body))
+	req.Header.Set("Content-Type", contentType)
+	return c.do(req)
+}
+
+// deleteReq sends a DELETE request to the given path.
+func (c *ACSClient) deleteReq(path string) ([]byte, error) {
+	endpoint := c.buildURL(path, nil)
+	req, _ := http.NewRequest("DELETE", endpoint, nil)
+	return c.do(req)
+}
+
+// SetParameterValues queues a setParameterValues task on a device.
+// parameterValues is a raw JSON array of [name, value, type] tuples.
+func (c *ACSClient) SetParameterValues(deviceID string, parameterValues json.RawMessage) ([]byte, error) {
+	task := map[string]any{
+		"name":            "setParameterValues",
+		"parameterValues": parameterValues,
+	}
+	return c.postTask(deviceID, task)
+}
+
+// GetDeviceParameters returns cached parameter values for a device using projection.
+func (c *ACSClient) GetDeviceParameters(deviceID, projection string) ([]byte, error) {
+	q := url.Values{}
+	q.Add("query", fmt.Sprintf(`{"_id":"%s"}`, deviceID))
+	if projection != "" {
+		q.Add("projection", projection)
+	}
+	u := c.buildURL("/devices/", q)
+	req, _ := http.NewRequest("GET", u, nil)
+	return c.do(req)
+}
+
+// ListPresets returns all presets as a JSON array.
+func (c *ACSClient) ListPresets() ([]byte, error) {
+	u := c.buildURL("/presets", nil)
+	req, _ := http.NewRequest("GET", u, nil)
+	return c.do(req)
+}
+
+// PutPreset creates or updates a preset. body is the full JSON preset document.
+func (c *ACSClient) PutPreset(name string, body []byte) ([]byte, error) {
+	return c.put(fmt.Sprintf("/presets/%s", url.PathEscape(name)), body, "application/json")
+}
+
+// DeletePreset removes a preset by name.
+func (c *ACSClient) DeletePreset(name string) ([]byte, error) {
+	return c.deleteReq(fmt.Sprintf("/presets/%s", url.PathEscape(name)))
+}
+
+// ListProvisions returns all provision scripts as a JSON array.
+func (c *ACSClient) ListProvisions() ([]byte, error) {
+	u := c.buildURL("/provisions", nil)
+	req, _ := http.NewRequest("GET", u, nil)
+	return c.do(req)
+}
+
+// PutProvision creates or updates a provision script. script is the JavaScript source.
+func (c *ACSClient) PutProvision(name, script string) ([]byte, error) {
+	return c.put(
+		fmt.Sprintf("/provisions/%s", url.PathEscape(name)),
+		[]byte(script),
+		"application/javascript",
+	)
+}
+
+// DeleteProvision removes a provision script by name.
+func (c *ACSClient) DeleteProvision(name string) ([]byte, error) {
+	return c.deleteReq(fmt.Sprintf("/provisions/%s", url.PathEscape(name)))
+}
+
+// GetFaultsForDevice returns fault records for a device.
+func (c *ACSClient) GetFaultsForDevice(devID string) ([]byte, error) {
+	q := url.Values{}
+	q.Add("query", fmt.Sprintf(`{"device":"%s"}`, devID))
+	u := c.buildURL("/faults", q)
+	req, _ := http.NewRequest("GET", u, nil)
+	return c.do(req)
+}
+
+// SearchDevices queries devices with a MongoDB-style filter string.
+func (c *ACSClient) SearchDevices(query string, limit int) ([]byte, error) {
+	q := url.Values{}
+	q.Add("query", query)
+	if limit > 0 {
+		q.Add("limit", fmt.Sprintf("%d", limit))
+	}
+	u := c.buildURL("/devices", q)
+	req, _ := http.NewRequest("GET", u, nil)
+	return c.do(req)
+}
+
+// AddTag adds a tag to a device.
+func (c *ACSClient) AddTag(deviceID, tag string) ([]byte, error) {
+	path := fmt.Sprintf("/devices/%s/tags/%s", url.PathEscape(deviceID), url.PathEscape(tag))
+	endpoint := c.buildURL(path, nil)
+	req, _ := http.NewRequest("POST", endpoint, nil)
+	return c.do(req)
+}
+
+// RemoveTag removes a tag from a device.
+func (c *ACSClient) RemoveTag(deviceID, tag string) ([]byte, error) {
+	return c.deleteReq(fmt.Sprintf("/devices/%s/tags/%s", url.PathEscape(deviceID), url.PathEscape(tag)))
+}
+
+// ConnectionRequest sends a connection request to wake a CPE without queuing a task.
+func (c *ACSClient) ConnectionRequest(deviceID string) ([]byte, error) {
+	path := fmt.Sprintf("/devices/%s/tasks", url.PathEscape(deviceID))
+	q := url.Values{"connection_request": {""}}
+	endpoint := c.buildURL(path, q)
+	req, _ := http.NewRequest("POST", endpoint, nil)
+	return c.do(req)
+}
+
+// DeleteTask removes a pending task from the queue.
+func (c *ACSClient) DeleteTask(taskID string) ([]byte, error) {
+	return c.deleteReq(fmt.Sprintf("/tasks/%s", url.PathEscape(taskID)))
+}
+
+// RetryTask retries a faulted task.
+func (c *ACSClient) RetryTask(taskID string) ([]byte, error) {
+	endpoint := c.buildURL(fmt.Sprintf("/tasks/%s/retry", url.PathEscape(taskID)), nil)
+	req, _ := http.NewRequest("POST", endpoint, nil)
+	return c.do(req)
+}
