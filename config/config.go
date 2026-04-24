@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"strconv"
 
@@ -26,10 +27,15 @@ func LoadACSConfig() ACSConfig {
 			limit = n
 		}
 	}
+	user := os.Getenv("ACS_USER")
+	pass := os.Getenv("ACS_PASS")
+	if user == "" && pass == "" {
+		log.Println("WARNING: ACS_USER and ACS_PASS not set — connecting to GenieACS NBI without authentication")
+	}
 	return ACSConfig{
 		BaseURL:     getEnv("ACS_URL", "http://localhost:7557"),
-		User:        getEnv("ACS_USER", "admin"),
-		Pass:        getEnv("ACS_PASS", "admin"),
+		User:        user,
+		Pass:        pass,
 		DeviceLimit: limit,
 	}
 }

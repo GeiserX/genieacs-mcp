@@ -64,8 +64,12 @@ func main() {
 		}
 	} else {
 		httpSrv := server.NewStreamableHTTPServer(s)
-		log.Println("GenieACS MCP bridge listening on :8080")
-		if err := httpSrv.Start(":8080"); err != nil {
+		addr := os.Getenv("MCP_LISTEN_ADDR")
+		if addr == "" {
+			addr = "127.0.0.1:8080"
+		}
+		log.Printf("GenieACS MCP bridge listening on %s", addr)
+		if err := httpSrv.Start(addr); err != nil {
 			log.Fatalf("server error: %v", err)
 		}
 	}

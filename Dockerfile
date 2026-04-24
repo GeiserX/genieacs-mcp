@@ -6,7 +6,7 @@
 # ───────────────────────────────────────────────
 # Stage 1 – build the Go binary
 # ───────────────────────────────────────────────
-FROM golang:1.26 AS builder
+FROM golang:1.24 AS builder
 LABEL maintainer="acsdesk@protonmail.com"
 
 WORKDIR /src
@@ -27,8 +27,6 @@ COPY --from=builder /out/genieacs-mcp /usr/local/bin/genieacs-mcp
 EXPOSE 8080
 
 ENV ACS_URL=http://genieacs:7557
-ENV ACS_USER=admin
-ENV ACS_PASS=admin
 ENV TRANSPORT=stdio
 
 ENTRYPOINT ["/usr/local/bin/genieacs-mcp"]

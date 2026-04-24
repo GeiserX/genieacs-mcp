@@ -73,10 +73,11 @@ go run ./cmd/server
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ACS_URL` | http://localhost:7557 | GenieACS NBI endpoint (without trailing /) |
-| `ACS_USER` | admin | GenieACS username |
-| `ACS_PASS` | admin | GenieACS password |
+| `ACS_USER` | _(empty)_ | GenieACS NBI basic-auth username |
+| `ACS_PASS` | _(empty)_ | GenieACS NBI basic-auth password |
 | `TRANSPORT` | _(empty = HTTP)_ | Set to `stdio` for stdio transport |
 | `DEVICE_LIMIT` | 500 | Max devices returned by `genieacs://devices/list` |
+| `MCP_LISTEN_ADDR` | 127.0.0.1:8080 | HTTP listen address (only used when TRANSPORT is not stdio) |
 
 Put them in a `.env` file (from `.env.example`) or set them in the environment. 
 
