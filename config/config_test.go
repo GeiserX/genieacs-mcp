@@ -16,11 +16,11 @@ func TestLoadACSConfig_Defaults(t *testing.T) {
 	if cfg.BaseURL != "http://localhost:7557" {
 		t.Errorf("expected default BaseURL http://localhost:7557, got %s", cfg.BaseURL)
 	}
-	if cfg.User != "admin" {
-		t.Errorf("expected default User admin, got %s", cfg.User)
+	if cfg.User != "" {
+		t.Errorf("expected empty default User, got %s", cfg.User)
 	}
-	if cfg.Pass != "admin" {
-		t.Errorf("expected default Pass admin, got %s", cfg.Pass)
+	if cfg.Pass != "" {
+		t.Errorf("expected empty default Pass, got %s", cfg.Pass)
 	}
 }
 
@@ -44,6 +44,50 @@ func TestLoadACSConfig_EnvOverride(t *testing.T) {
 	}
 	if cfg.Pass != "mypass" {
 		t.Errorf("expected Pass mypass, got %s", cfg.Pass)
+	}
+}
+
+func TestLoadACSConfig_DeviceLimit_Default(t *testing.T) {
+	os.Unsetenv("DEVICE_LIMIT")
+	cfg := LoadACSConfig()
+	if cfg.DeviceLimit != 500 {
+		t.Errorf("expected default DeviceLimit 500, got %d", cfg.DeviceLimit)
+	}
+}
+
+func TestLoadACSConfig_DeviceLimit_Valid(t *testing.T) {
+	os.Setenv("DEVICE_LIMIT", "1000")
+	defer os.Unsetenv("DEVICE_LIMIT")
+	cfg := LoadACSConfig()
+	if cfg.DeviceLimit != 1000 {
+		t.Errorf("expected DeviceLimit 1000, got %d", cfg.DeviceLimit)
+	}
+}
+
+func TestLoadACSConfig_DeviceLimit_Invalid(t *testing.T) {
+	os.Setenv("DEVICE_LIMIT", "notanumber")
+	defer os.Unsetenv("DEVICE_LIMIT")
+	cfg := LoadACSConfig()
+	if cfg.DeviceLimit != 500 {
+		t.Errorf("expected fallback DeviceLimit 500 for invalid input, got %d", cfg.DeviceLimit)
+	}
+}
+
+func TestLoadACSConfig_DeviceLimit_Negative(t *testing.T) {
+	os.Setenv("DEVICE_LIMIT", "-5")
+	defer os.Unsetenv("DEVICE_LIMIT")
+	cfg := LoadACSConfig()
+	if cfg.DeviceLimit != 500 {
+		t.Errorf("expected fallback DeviceLimit 500 for negative input, got %d", cfg.DeviceLimit)
+	}
+}
+
+func TestLoadACSConfig_DeviceLimit_Zero(t *testing.T) {
+	os.Setenv("DEVICE_LIMIT", "0")
+	defer os.Unsetenv("DEVICE_LIMIT")
+	cfg := LoadACSConfig()
+	if cfg.DeviceLimit != 500 {
+		t.Errorf("expected fallback DeviceLimit 500 for zero input, got %d", cfg.DeviceLimit)
 	}
 }
 

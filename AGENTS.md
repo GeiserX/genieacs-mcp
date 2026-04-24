@@ -15,14 +15,18 @@ MCP (Model Context Protocol) server built in Go. Exposes tools and resources for
 
 ### Key Files
 
-- `main.go` — Entry point, MCP server initialization
-- `tools/` — MCP tool implementations
-- `Dockerfile` — Container build
+- `cmd/server/main.go` — Entry point, MCP server initialization, tool/resource registration
+- `client/acs.go` — HTTP client wrapping the GenieACS NBI REST API
+- `config/config.go` — Environment variable loading (ACS_URL, ACS_USER, ACS_PASS, DEVICE_LIMIT)
+- `internal/tools/` — 12 MCP tool handlers (parameter CRUD, presets, provisions, tags, search, tasks)
+- `internal/resources/` — 7 MCP resource handlers (devices, files, tasks, presets, provisions, faults)
+- `version/` — Build version metadata injected by GoReleaser ldflags
+- `Dockerfile` — Multi-stage container build
 
 ## Development
 
 ```bash
-go build -o genieacs-mcp .
+go build -o genieacs-mcp ./cmd/server
 ```
 
 ## Security

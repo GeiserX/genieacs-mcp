@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 type ACSClient struct {
@@ -17,12 +18,21 @@ type ACSClient struct {
 }
 
 func NewACS(base, user, pass string) *ACSClient {
+	if _, err := url.Parse(base); err != nil {
+		panic(fmt.Sprintf("invalid ACS base URL %q: %v", base, err))
+	}
 	return &ACSClient{
 		base: base,
-		hc:   &http.Client{},
+		hc:   &http.Client{Timeout: 30 * time.Second},
 		user: user,
 		pass: pass,
 	}
+}
+
+// jsonQueryVal safely builds a JSON query object {"key":"value"} with proper escaping.
+func jsonQueryVal(key, value string) string {
+	v, _ := json.Marshal(value)
+	return fmt.Sprintf(`{%q:%s}`, key, string(v))
 }
 
 func (c *ACSClient) buildURL(path string, q url.Values) string {
@@ -51,7 +61,7 @@ func (c *ACSClient) do(req *http.Request) ([]byte, error) {
 // Example high-level method – get device by ID
 func (c *ACSClient) GetDevice(id string) ([]byte, error) {
 	q := url.Values{}
-	q.Add("query", fmt.Sprintf(`{"_id":"%s"}`, id))
+	q.Add("query", jsonQueryVal("_id", id))
 	url := c.buildURL("/devices/", q)
 	req, _ := http.NewRequest("GET", url, nil)
 	return c.do(req)
@@ -61,7 +71,7 @@ func (c *ACSClient) GetDevice(id string) ([]byte, error) {
 // If multiple files share the same filename it will return them all.
 func (c *ACSClient) GetFileByName(fname string) ([]byte, error) {
 	q := url.Values{}
-	q.Add("query", fmt.Sprintf(`{"filename":"%s"}`, fname))
+	q.Add("query", jsonQueryVal("filename", fname))
 	url := c.buildURL("/files", q)
 	req, _ := http.NewRequest("GET", url, nil)
 	return c.do(req)
@@ -70,7 +80,7 @@ func (c *ACSClient) GetFileByName(fname string) ([]byte, error) {
 // GetTasksForDevice returns ALL tasks (queued or executed) for a device.
 func (c *ACSClient) GetTasksForDevice(devID string) ([]byte, error) {
 	q := url.Values{}
-	q.Add("query", fmt.Sprintf(`{"device":"%s"}`, devID))
+	q.Add("query", jsonQueryVal("device", devID))
 	url := c.buildURL("/tasks", q)
 	req, _ := http.NewRequest("GET", url, nil)
 	return c.do(req)
@@ -92,7 +102,10 @@ func (c *ACSClient) ListDeviceSummaries(limit int) ([]byte, error) {
 
 // private helper that actually POSTS the task
 func (c *ACSClient) postTask(deviceID string, body any) ([]byte, error) {
-	b, _ := json.Marshal(body)
+	b, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal task body: %w", err)
+	}
 
 	// we always ask for an immediate ConnectionRequest so that GenieACS
 	// tries to do the action right away if the CPE is reachable.
@@ -121,7 +134,7 @@ func (c *ACSClient) DownloadFirmware(deviceID, fileID, filename string) ([]byte,
 		"file": fileID,
 	}
 	if filename != "" {
-		task["filename"] = filename
+		task["targetFileName"] = filename
 	}
 	return c.postTask(deviceID, task)
 }
@@ -163,7 +176,7 @@ func (c *ACSClient) SetParameterValues(deviceID string, parameterValues json.Raw
 // GetDeviceParameters returns cached parameter values for a device using projection.
 func (c *ACSClient) GetDeviceParameters(deviceID, projection string) ([]byte, error) {
 	q := url.Values{}
-	q.Add("query", fmt.Sprintf(`{"_id":"%s"}`, deviceID))
+	q.Add("query", jsonQueryVal("_id", deviceID))
 	if projection != "" {
 		q.Add("projection", projection)
 	}
@@ -211,9 +224,11 @@ func (c *ACSClient) DeleteProvision(name string) ([]byte, error) {
 }
 
 // GetFaultsForDevice returns fault records for a device.
+// Fault _id format is "deviceId:channel", so we match by regex prefix on _id.
 func (c *ACSClient) GetFaultsForDevice(devID string) ([]byte, error) {
 	q := url.Values{}
-	q.Add("query", fmt.Sprintf(`{"device":"%s"}`, devID))
+	escaped, _ := json.Marshal("^" + devID + ":")
+	q.Add("query", fmt.Sprintf(`{"_id":{"$regex":%s}}`, string(escaped)))
 	u := c.buildURL("/faults", q)
 	req, _ := http.NewRequest("GET", u, nil)
 	return c.do(req)

@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -46,6 +47,9 @@ func NewSearchDevices(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) 
 		query, err := req.RequireString("query")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
+		}
+		if !json.Valid([]byte(query)) {
+			return mcp.NewToolResultError("query must be valid JSON"), nil
 		}
 
 		limit := 50

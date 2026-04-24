@@ -277,8 +277,8 @@ func TestDownloadFirmware(t *testing.T) {
 		if body["file"] != "file-001" {
 			t.Errorf("expected file file-001, got %v", body["file"])
 		}
-		if body["filename"] != "firmware.bin" {
-			t.Errorf("expected filename firmware.bin, got %v", body["filename"])
+		if body["targetFileName"] != "firmware.bin" {
+			t.Errorf("expected targetFileName firmware.bin, got %v", body["targetFileName"])
 		}
 		w.Write([]byte(`{"_id":"task-002"}`))
 	}))
@@ -298,8 +298,8 @@ func TestDownloadFirmware_NoFilename(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
 		json.NewDecoder(r.Body).Decode(&body)
-		if _, ok := body["filename"]; ok {
-			t.Error("did not expect filename key when empty")
+		if _, ok := body["targetFileName"]; ok {
+			t.Error("did not expect targetFileName key when empty")
 		}
 		w.Write([]byte(`{"_id":"task-003"}`))
 	}))
@@ -521,7 +521,7 @@ func TestGetFaultsForDevice(t *testing.T) {
 			t.Errorf("expected /faults, got %s", r.URL.Path)
 		}
 		query := r.URL.Query().Get("query")
-		if query != `{"device":"dev-001"}` {
+		if query != `{"_id":{"$regex":"^dev-001:"}}` {
 			t.Errorf("unexpected query: %s", query)
 		}
 		w.Write([]byte(`[]`))
