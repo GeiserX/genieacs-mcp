@@ -30,8 +30,8 @@
 
 | Type            | What for                                                                   | MCP URI / Tool id                |
 |-----------------|----------------------------------------------------------------------------|----------------------------------|
-| **Resources**   | Consume GenieACS data read-only                                            | `genieacs://device/{id}`<br>`genieacs://file/{name}`<br>`genieacs://tasks/{id}`<br>`genieacs://devices/list` |
-| **Tools**       | Invoke actions on a CPE through GenieACS                                   | `reboot_device`<br>`download_firmware`<br>`refresh_parameter` |
+| **Resources**   | Consume GenieACS data read-only                                            | `genieacs://device/{id}`<br>`genieacs://file/{name}`<br>`genieacs://tasks/{id}`<br>`genieacs://devices/list`<br>`genieacs://presets/list`<br>`genieacs://provisions/list`<br>`genieacs://faults/{id}` |
+| **Tools**       | Invoke actions on a CPE through GenieACS                                   | `reboot_device`<br>`download_firmware`<br>`refresh_parameter`<br>`set_parameter`<br>`get_parameter`<br>`manage_preset`<br>`manage_provision`<br>`search_devices`<br>`tag_device`<br>`connection_request`<br>`delete_task`<br>`retry_task` |
 
 Everything is exposed over a single JSON-RPC endpoint (`/mcp`).  
 LLMs / Agents can: `initialize → readResource → listTools → callTool` … and so on.
@@ -76,6 +76,7 @@ go run ./cmd/server
 | `ACS_USER` | admin | GenieACS username |
 | `ACS_PASS` | admin | GenieACS password |
 | `TRANSPORT` | _(empty = HTTP)_ | Set to `stdio` for stdio transport |
+| `DEVICE_LIMIT` | 500 | Max devices returned by `genieacs://devices/list` |
 
 Put them in a `.env` file (from `.env.example`) or set them in the environment. 
 
@@ -92,8 +93,8 @@ Lacks Testing with actual MCP clients (client LLMs), so please, submit your PRs 
   "schema_version": "v1",
   "name_for_human": "GenieACS-MCP",
   "name_for_model": "genieacs_mcp",
-  "description_for_human": "Read data from GenieACS and run actions on CPEs (reboot, firmware update, parameter refresh).",
-  "description_for_model": "Interact with an Auto-Configuration-Server (ACS) that manages routers. First call initialize, then reuse the returned session id in header \"Mcp-Session-Id\" for every other call. Use readResource to fetch URIs that begin with genieacs://. Use listTools to discover available actions and callTool to execute them.",
+  "description_for_human": "Full CPE management through GenieACS — parameter read/write, presets, provisions, firmware, tags, search, and task lifecycle.",
+  "description_for_model": "Interact with a GenieACS TR-069 Auto-Configuration-Server (ACS) that manages CPE devices (routers, ONTs, gateways). First call initialize, then reuse the returned session id in header \"Mcp-Session-Id\" for every other call. Use readResource to fetch URIs that begin with genieacs:// (devices, presets, provisions, faults). Use listTools to discover available actions (parameter read/write, presets, provisions, tags, search, task management) and callTool to execute them.",
   "auth": { "type": "none" },
   "api": {
     "type": "jsonrpc-mcp",

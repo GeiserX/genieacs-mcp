@@ -11,6 +11,7 @@ import (
 	"github.com/geiserx/genieacs-mcp/internal/resources"
 	"github.com/geiserx/genieacs-mcp/internal/tools"
 	"github.com/geiserx/genieacs-mcp/version"
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -27,43 +28,32 @@ func main() {
 		server.WithRecovery(),
 	)
 
-	//----------------------------------------------------
-	// Register device: genieacs://device/{id}
-	//----------------------------------------------------
+	// --- Resources ---
 	resources.RegisterDevice(s, acs)
-
-	//----------------------------------------------------
-	// File metadata  –  genieacs://file/{name}
-	//----------------------------------------------------
 	resources.RegisterFile(s, acs)
-
-	//----------------------------------------------------
-	// Device tasks  –  genieacs://tasks/{deviceId}
-	//----------------------------------------------------
 	resources.RegisterTasks(s, acs)
+	resources.RegisterCatalogue(s, acs, cfg.DeviceLimit)
+	resources.RegisterPresets(s, acs)
+	resources.RegisterProvisions(s, acs)
+	resources.RegisterFaults(s, acs)
 
-	//----------------------------------------------------
-	// Device catalogue  –  genieacs://devices/list
-	//----------------------------------------------------
-	resources.RegisterCatalogue(s, acs)
-
-	// -----------------------------------------------------------------
-	// TOOL: reboot_device
-	// -----------------------------------------------------------------
-	tool, handler := tools.NewReboot(acs)
-	s.AddTool(tool, handler)
-
-	// -----------------------------------------------------------------
-	// TOOL: download_firmware
-	// -----------------------------------------------------------------
-	tool, handler = tools.NewDownloadFirmware(acs) // <— new lines
-	s.AddTool(tool, handler)
-
-	// -----------------------------------------------------------------
-	// TOOL: refresh_parameter
-	// -----------------------------------------------------------------
-	tool, handler = tools.NewRefreshParameter(acs)
-	s.AddTool(tool, handler)
+	// --- Tools ---
+	register := func(factory func(*client.ACSClient) (mcp.Tool, server.ToolHandlerFunc)) {
+		t, h := factory(acs)
+		s.AddTool(t, h)
+	}
+	register(tools.NewReboot)
+	register(tools.NewDownloadFirmware)
+	register(tools.NewRefreshParameter)
+	register(tools.NewSetParameter)
+	register(tools.NewGetParameter)
+	register(tools.NewManagePreset)
+	register(tools.NewManageProvision)
+	register(tools.NewSearchDevices)
+	register(tools.NewTagDevice)
+	register(tools.NewConnectionRequest)
+	register(tools.NewDeleteTask)
+	register(tools.NewRetryTask)
 
 	transport := strings.ToLower(os.Getenv("TRANSPORT"))
 	if transport == "stdio" {
