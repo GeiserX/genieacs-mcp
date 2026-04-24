@@ -13,7 +13,13 @@ func RegisterCatalogue(s *server.MCPServer, acs *client.ACSClient) {
 	res := mcp.NewResource(
 		"genieacs://devices/list",
 		"Device summary list",
-		mcp.WithResourceDescription("Lightweight list of devices and last inform time"),
+		mcp.WithResourceDescription(
+			"Returns a lightweight JSON array of all CPE devices known to GenieACS (up to 500). "+
+				"Each entry includes the device _id, serial number, manufacturer, product class, and last "+
+				"inform timestamp. Use this resource as the starting point to discover device IDs before "+
+				"calling tools or fetching individual device details with genieacs://device/{id}. "+
+				"The response is an array of JSON objects. Returns an empty array if no devices are registered.",
+		),
 		mcp.WithMIMEType("application/json"),
 	)
 

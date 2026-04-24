@@ -15,7 +15,14 @@ func RegisterDevice(s *server.MCPServer, acs *client.ACSClient) {
 	tpl := mcp.NewResourceTemplate(
 		"genieacs://device/{id}",
 		"GenieACS device JSON",
-		mcp.WithTemplateDescription("Raw device document as returned by NBI"),
+		mcp.WithTemplateDescription(
+			"Returns the full JSON document for a single CPE device as stored in GenieACS. "+
+				"Contains all TR-069 parameters (Device.DeviceInfo.*, Device.ManagementServer.*, etc.), "+
+				"tags, last inform timestamp, and task history. Use genieacs://devices/list first to discover "+
+				"valid device IDs, then fetch individual devices with this resource. "+
+				"The {id} parameter is the device's _id field (typically OUI-ProductClass-SerialNumber). "+
+				"Response is a single JSON object. Returns a 404 error if the device ID does not exist.",
+		),
 		mcp.WithTemplateMIMEType("application/json"),
 	)
 
