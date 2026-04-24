@@ -22,7 +22,7 @@ func main() {
 	// Create MCP server
 	s := server.NewMCPServer(
 		"GenieACS MCP Bridge",
-		"0.0.1",
+		version.Version,
 		server.WithToolCapabilities(true),
 		server.WithRecovery(),
 	)

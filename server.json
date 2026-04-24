@@ -11,7 +11,7 @@
     {
       "registryType": "npm",
       "identifier": "genieacs-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       },
@@ -41,7 +41,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "drumsergio/genieacs-mcp:v0.1.0",
+      "identifier": "drumsergio/genieacs-mcp:v0.2.0",
       "transport": {
         "type": "stdio"
       },

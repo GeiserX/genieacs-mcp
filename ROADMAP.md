@@ -70,3 +70,4 @@
 - [x] GoReleaser-based release pipeline
 - [x] Published to Official MCP Registry, Glama, MCPServers.org, mcp.so, ToolSDK, awesome-mcp-servers
 - [x] Rich TDQS-compliant tool and resource descriptions (purpose, guidelines, limitations, examples)
+- [x] Dynamic MCP server version from build metadata (no more hardcoded version string)
