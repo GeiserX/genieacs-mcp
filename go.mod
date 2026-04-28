@@ -1,10 +1,10 @@
 module github.com/geiserx/genieacs-mcp
 
-go 1.24.3
+go 1.25.5
 
 require (
 	github.com/joho/godotenv v1.5.1
-	github.com/mark3labs/mcp-go v0.48.0
+	github.com/mark3labs/mcp-go v0.49.0
 )
 
 require (
