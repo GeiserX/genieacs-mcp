@@ -78,6 +78,7 @@ go run ./cmd/server
 | `TRANSPORT` | _(empty = HTTP)_ | Set to `stdio` for stdio transport |
 | `DEVICE_LIMIT` | 500 | Max devices returned by `genieacs://devices/list` |
 | `MCP_LISTEN_ADDR` | 127.0.0.1:8080 | HTTP listen address (only used when TRANSPORT is not stdio) |
+| `MCP_AUTH_TOKEN` | _(empty)_ | Bearer token for HTTP transport auth. **Required** when `MCP_LISTEN_ADDR` is non-loopback |
 
 Put them in a `.env` file (from `.env.example`) or set them in the environment. 
 
@@ -96,7 +97,7 @@ Lacks Testing with actual MCP clients (client LLMs), so please, submit your PRs 
   "name_for_model": "genieacs_mcp",
   "description_for_human": "Full CPE management through GenieACS — parameter read/write, presets, provisions, firmware, tags, search, and task lifecycle.",
   "description_for_model": "Interact with a GenieACS TR-069 Auto-Configuration-Server (ACS) that manages CPE devices (routers, ONTs, gateways). First call initialize, then reuse the returned session id in header \"Mcp-Session-Id\" for every other call. Use readResource to fetch URIs that begin with genieacs:// (devices, presets, provisions, faults). Use listTools to discover available actions (parameter read/write, presets, provisions, tags, search, task management) and callTool to execute them.",
-  "auth": { "type": "none" },
+  "auth": { "type": "bearer", "token": "<MCP_AUTH_TOKEN value>" },
   "api": {
     "type": "jsonrpc-mcp",
     "url":  "http://localhost:8080/mcp",

@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"strings"
 
@@ -14,6 +17,29 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
+
+func isLoopbackAddr(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	if host == "" || host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+func bearerAuth(next http.Handler, token string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func main() {
 	log.Printf("GenieACS MCP %s starting…", version.String())
@@ -68,9 +94,22 @@ func main() {
 		if addr == "" {
 			addr = "127.0.0.1:8080"
 		}
-		log.Printf("GenieACS MCP bridge listening on %s", addr)
-		if err := httpSrv.Start(addr); err != nil {
-			log.Fatalf("server error: %v", err)
+		authToken := os.Getenv("MCP_AUTH_TOKEN")
+		if authToken == "" && !isLoopbackAddr(addr) {
+			log.Fatal("MCP_AUTH_TOKEN is required when MCP_LISTEN_ADDR is not loopback")
+		}
+		if authToken != "" {
+			mux := http.NewServeMux()
+			mux.Handle("/mcp", bearerAuth(httpSrv, authToken))
+			log.Printf("GenieACS MCP bridge listening on %s (auth enabled)", addr)
+			if err := http.ListenAndServe(addr, mux); err != nil {
+				log.Fatalf("server error: %v", err)
+			}
+		} else {
+			log.Printf("GenieACS MCP bridge listening on %s", addr)
+			if err := httpSrv.Start(addr); err != nil {
+				log.Fatalf("server error: %v", err)
+			}
 		}
 	}
 }
