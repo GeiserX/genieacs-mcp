@@ -190,3 +190,57 @@ func TestDNSRebindGuard_BlocksUntrustedOriginOnTrustedHost(t *testing.T) {
 		t.Fatalf("untrusted-origin request got %d, want 403", rec.Code)
 	}
 }
+
+func TestBuildHTTPHandler(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// request is a helper that runs one request through h.
+	request := func(h http.Handler, host, origin, auth string) int {
+		req := httptest.NewRequest(http.MethodPost, "http://"+host+"/mcp", nil)
+		req.Host = host
+		if origin != "" {
+			req.Header.Set("Origin", origin)
+		}
+		if auth != "" {
+			req.Header.Set("Authorization", auth)
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code
+	}
+
+	t.Run("no auth: guard still enforced", func(t *testing.T) {
+		h := buildHTTPHandler(backend, "127.0.0.1:8080", "", "", "")
+		if code := request(h, "127.0.0.1:8080", "", ""); code != http.StatusOK {
+			t.Errorf("loopback request got %d, want 200", code)
+		}
+		if code := request(h, "attacker.example:8080", "http://attacker.example:8080", ""); code != http.StatusForbidden {
+			t.Errorf("rebind request got %d, want 403", code)
+		}
+	})
+
+	t.Run("auth: guard runs and bearer required", func(t *testing.T) {
+		h := buildHTTPHandler(backend, "127.0.0.1:8080", "tok", "", "")
+		// Trusted host but missing token -> 401.
+		if code := request(h, "127.0.0.1:8080", "", ""); code != http.StatusUnauthorized {
+			t.Errorf("missing token got %d, want 401", code)
+		}
+		// Trusted host with valid token -> 200.
+		if code := request(h, "127.0.0.1:8080", "", "Bearer tok"); code != http.StatusOK {
+			t.Errorf("valid token got %d, want 200", code)
+		}
+		// Untrusted host is rejected before auth is even checked -> 403.
+		if code := request(h, "attacker.example:8080", "", "Bearer tok"); code != http.StatusForbidden {
+			t.Errorf("untrusted host got %d, want 403", code)
+		}
+	})
+
+	t.Run("extra allowlists honoured", func(t *testing.T) {
+		h := buildHTTPHandler(backend, "127.0.0.1:8080", "", "acs.example.com", "https://app.example.com")
+		if code := request(h, "acs.example.com", "https://app.example.com", ""); code != http.StatusOK {
+			t.Errorf("allowlisted host/origin got %d, want 200", code)
+		}
+	})
+}

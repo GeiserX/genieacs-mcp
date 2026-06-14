@@ -106,6 +106,21 @@ func dnsRebindGuard(next http.Handler, hosts, origins map[string]bool) http.Hand
 	})
 }
 
+// buildHTTPHandler wraps the MCP handler for the HTTP transport: an outer
+// DNS-rebinding guard (Host/Origin validation derived from addr plus the
+// MCP_ALLOWED_HOSTS / MCP_ALLOWED_ORIGINS allowlists) and, when authToken is
+// set, an inner bearer-auth check.
+func buildHTTPHandler(mcpHandler http.Handler, addr, authToken, extraHosts, extraOrigins string) http.Handler {
+	allowedHosts := allowedHostSet(addr, splitList(extraHosts))
+	allowedOrigins := allowedOriginSet(allowedHosts, splitList(extraOrigins))
+
+	handler := mcpHandler
+	if authToken != "" {
+		handler = bearerAuth(handler, authToken)
+	}
+	return dnsRebindGuard(handler, allowedHosts, allowedOrigins)
+}
+
 func bearerAuth(next http.Handler, token string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -180,16 +195,13 @@ func main() {
 
 	// Validate Host/Origin on every request to prevent DNS rebinding from a
 	// malicious web page reaching this listener (GHSA-cmwv-wf9p-p8wx).
-	allowedHosts := allowedHostSet(addr, splitList(os.Getenv("MCP_ALLOWED_HOSTS")))
-	allowedOrigins := allowedOriginSet(allowedHosts, splitList(os.Getenv("MCP_ALLOWED_ORIGINS")))
+	handler := buildHTTPHandler(httpSrv, addr, authToken,
+		os.Getenv("MCP_ALLOWED_HOSTS"), os.Getenv("MCP_ALLOWED_ORIGINS"))
 
-	var handler http.Handler = httpSrv
 	authState := "no auth token"
 	if authToken != "" {
-		handler = bearerAuth(handler, authToken)
 		authState = "auth enabled"
 	}
-	handler = dnsRebindGuard(handler, allowedHosts, allowedOrigins)
 
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", handler)
