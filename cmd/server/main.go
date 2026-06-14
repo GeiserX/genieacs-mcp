@@ -30,6 +30,82 @@ func isLoopbackAddr(addr string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
+func isWildcardHost(host string) bool {
+	switch host {
+	case "", "0.0.0.0", "::", "[::]":
+		return true
+	}
+	return false
+}
+
+// splitList parses a comma-separated environment value into a trimmed,
+// non-empty slice.
+func splitList(v string) []string {
+	var out []string
+	for _, item := range strings.Split(v, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+// allowedHostSet builds the set of acceptable Host header values for a
+// listener on addr. Loopback names on the listen port are always trusted so
+// the documented local setup works with zero configuration. A concrete
+// (non-wildcard) bind host is trusted as well, and operators can add extra
+// names — e.g. a reverse-proxy domain — via MCP_ALLOWED_HOSTS.
+func allowedHostSet(addr string, extra []string) map[string]bool {
+	set := map[string]bool{}
+	host, port, err := net.SplitHostPort(addr)
+	if err == nil && port != "" {
+		for _, h := range []string{"127.0.0.1", "localhost", "::1"} {
+			set[net.JoinHostPort(h, port)] = true
+		}
+		if !isWildcardHost(host) {
+			set[net.JoinHostPort(host, port)] = true
+		}
+	}
+	for _, h := range extra {
+		set[h] = true
+	}
+	return set
+}
+
+// allowedOriginSet derives acceptable browser Origin values (http/https) from
+// the allowed hosts, plus any explicit MCP_ALLOWED_ORIGINS entries.
+func allowedOriginSet(hosts map[string]bool, extra []string) map[string]bool {
+	set := map[string]bool{}
+	for h := range hosts {
+		set["http://"+h] = true
+		set["https://"+h] = true
+	}
+	for _, o := range extra {
+		set[strings.TrimRight(o, "/")] = true
+	}
+	return set
+}
+
+// dnsRebindGuard rejects requests whose Host header is not in the allowed set,
+// and requests carrying an Origin that is not allowed. This blocks DNS
+// rebinding: after a rebind the browser still sends the attacker's Host/Origin
+// (e.g. "attacker.example:8080"), which is not trusted. A missing Origin is
+// permitted because non-browser MCP clients do not send one; the Host check is
+// what stops the browser-driven attack.
+func dnsRebindGuard(next http.Handler, hosts, origins map[string]bool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !hosts[r.Host] {
+			http.Error(w, "forbidden: untrusted Host header", http.StatusForbidden)
+			return
+		}
+		if origin := r.Header.Get("Origin"); origin != "" && !origins[strings.TrimRight(origin, "/")] {
+			http.Error(w, "forbidden: untrusted Origin header", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func bearerAuth(next http.Handler, token string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -88,28 +164,37 @@ func main() {
 		if err := stdioSrv.Listen(context.Background(), os.Stdin, os.Stdout); err != nil {
 			log.Fatalf("stdio server error: %v", err)
 		}
-	} else {
-		httpSrv := server.NewStreamableHTTPServer(s)
-		addr := os.Getenv("MCP_LISTEN_ADDR")
-		if addr == "" {
-			addr = "127.0.0.1:8080"
-		}
-		authToken := os.Getenv("MCP_AUTH_TOKEN")
-		if authToken == "" && !isLoopbackAddr(addr) {
-			log.Fatal("MCP_AUTH_TOKEN is required when MCP_LISTEN_ADDR is not loopback")
-		}
-		if authToken != "" {
-			mux := http.NewServeMux()
-			mux.Handle("/mcp", bearerAuth(httpSrv, authToken))
-			log.Printf("GenieACS MCP bridge listening on %s (auth enabled)", addr)
-			if err := http.ListenAndServe(addr, mux); err != nil {
-				log.Fatalf("server error: %v", err)
-			}
-		} else {
-			log.Printf("GenieACS MCP bridge listening on %s", addr)
-			if err := httpSrv.Start(addr); err != nil {
-				log.Fatalf("server error: %v", err)
-			}
-		}
+		return
+	}
+
+	httpSrv := server.NewStreamableHTTPServer(s)
+	addr := os.Getenv("MCP_LISTEN_ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:8080"
+	}
+
+	authToken := os.Getenv("MCP_AUTH_TOKEN")
+	if authToken == "" && !isLoopbackAddr(addr) {
+		log.Fatal("MCP_AUTH_TOKEN is required when MCP_LISTEN_ADDR is not loopback")
+	}
+
+	// Validate Host/Origin on every request to prevent DNS rebinding from a
+	// malicious web page reaching this listener (GHSA-cmwv-wf9p-p8wx).
+	allowedHosts := allowedHostSet(addr, splitList(os.Getenv("MCP_ALLOWED_HOSTS")))
+	allowedOrigins := allowedOriginSet(allowedHosts, splitList(os.Getenv("MCP_ALLOWED_ORIGINS")))
+
+	var handler http.Handler = httpSrv
+	authState := "no auth token"
+	if authToken != "" {
+		handler = bearerAuth(handler, authToken)
+		authState = "auth enabled"
+	}
+	handler = dnsRebindGuard(handler, allowedHosts, allowedOrigins)
+
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", handler)
+	log.Printf("GenieACS MCP bridge listening on %s/mcp (Host/Origin guard enabled, %s)", addr, authState)
+	if err := http.ListenAndServe(addr, mux); err != nil {
+		log.Fatalf("server error: %v", err)
 	}
 }
