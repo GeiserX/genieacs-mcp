@@ -70,6 +70,67 @@ func TestAllowedOriginSet(t *testing.T) {
 	}
 }
 
+func TestSplitList(t *testing.T) {
+	cases := []struct {
+		in   string
+		want []string
+	}{
+		{"", nil},
+		{"   ", nil},
+		{"a", []string{"a"}},
+		{"a,b , c", []string{"a", "b", "c"}},
+		{",,a,,", []string{"a"}},
+	}
+	for _, c := range cases {
+		got := splitList(c.in)
+		if len(got) != len(c.want) {
+			t.Errorf("splitList(%q) = %v, want %v", c.in, got, c.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != c.want[i] {
+				t.Errorf("splitList(%q)[%d] = %q, want %q", c.in, i, got[i], c.want[i])
+			}
+		}
+	}
+}
+
+func TestBearerAuth(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	h := bearerAuth(backend, "s3cret")
+
+	t.Run("valid token", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/mcp", nil)
+		req.Header.Set("Authorization", "Bearer s3cret")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("valid token got %d, want 200", rec.Code)
+		}
+	})
+
+	t.Run("wrong token", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/mcp", nil)
+		req.Header.Set("Authorization", "Bearer nope")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("wrong token got %d, want 401", rec.Code)
+		}
+	})
+
+	t.Run("missing token", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/mcp", nil)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("missing token got %d, want 401", rec.Code)
+		}
+	})
+}
+
 // newGuardedHandler builds the same handler chain as main() for a loopback
 // listener: a 200-returning backend wrapped in the DNS-rebinding guard.
 func newGuardedHandler(addr string) http.Handler {
