@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/geiserx/genieacs-mcp/client"
 	"github.com/mark3labs/mcp-go/server"
@@ -147,6 +151,107 @@ func TestNewMCPServer(t *testing.T) {
 	_, srv, err := newHTTPServer(httpSrv, httpEnv{addr: "127.0.0.1:8080"})
 	if err != nil || srv == nil {
 		t.Fatalf("server build failed: %v", err)
+	}
+}
+
+func TestRunStdio_ReturnsOnEOF(t *testing.T) {
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	s := newMCPServer(acs, 500)
+	// An empty reader is immediately at EOF, so Listen returns cleanly.
+	done := make(chan error, 1)
+	go func() { done <- runStdio(context.Background(), s, strings.NewReader(""), io.Discard) }()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("runStdio returned error: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("runStdio did not return on EOF")
+	}
+}
+
+func TestRun_StdioTransport(t *testing.T) {
+	t.Setenv("TRANSPORT", "stdio")
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	s := newMCPServer(acs, 500)
+	done := make(chan error, 1)
+	go func() { done <- run(context.Background(), s, strings.NewReader(""), io.Discard) }()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("run(stdio) returned error: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("run(stdio) did not return on EOF")
+	}
+}
+
+func TestRun_HTTPTransport_ShutsDownOnContextCancel(t *testing.T) {
+	t.Setenv("TRANSPORT", "")
+	t.Setenv("MCP_LISTEN_ADDR", "127.0.0.1:0") // ephemeral port, avoids clashes
+	t.Setenv("MCP_AUTH_TOKEN", "")
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	s := newMCPServer(acs, 500)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- run(ctx, s, nil, nil) }()
+
+	// Give the listener a moment to start, then cancel for graceful shutdown.
+	time.Sleep(200 * time.Millisecond)
+	cancel()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("run(http) returned error on shutdown: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("run(http) did not shut down on context cancel")
+	}
+}
+
+func TestRun_HTTPTransport_AuthRequiredError(t *testing.T) {
+	t.Setenv("TRANSPORT", "")
+	t.Setenv("MCP_LISTEN_ADDR", "0.0.0.0:0")
+	t.Setenv("MCP_AUTH_TOKEN", "")
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	s := newMCPServer(acs, 500)
+	err := run(context.Background(), s, nil, nil)
+	if !errors.Is(err, errAuthTokenRequired) {
+		t.Fatalf("run() err = %v, want errAuthTokenRequired", err)
+	}
+}
+
+func TestServeHTTP_GracefulShutdown(t *testing.T) {
+	srv := &http.Server{
+		Addr: "127.0.0.1:0",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}),
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- serveHTTP(ctx, srv) }()
+	time.Sleep(150 * time.Millisecond)
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("serveHTTP shutdown error: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("serveHTTP did not return after cancel")
+	}
+}
+
+func TestServeHTTP_ListenError(t *testing.T) {
+	// An invalid address makes ListenAndServe fail immediately; serveHTTP must
+	// surface that error rather than hang.
+	srv := &http.Server{Addr: "256.256.256.256:99999"}
+	err := serveHTTP(context.Background(), srv)
+	if err == nil {
+		t.Fatal("serveHTTP expected an error for an invalid listen address")
 	}
 }
 

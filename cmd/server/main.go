@@ -4,11 +4,15 @@ import (
 	"context"
 	"crypto/subtle"
 	"errors"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/geiserx/genieacs-mcp/client"
 	"github.com/geiserx/genieacs-mcp/config"
@@ -216,6 +220,58 @@ func newMCPServer(acs *client.ACSClient, deviceLimit int) *server.MCPServer {
 	return s
 }
 
+// runStdio serves the MCP server over the stdio transport until ctx is
+// cancelled or the input stream closes.
+func runStdio(ctx context.Context, s *server.MCPServer, in io.Reader, out io.Writer) error {
+	log.Println("GenieACS MCP bridge running on stdio")
+	return server.NewStdioServer(s).Listen(ctx, in, out)
+}
+
+// serveHTTP starts srv and blocks until ctx is cancelled, then shuts the
+// server down gracefully. A clean shutdown (http.ErrServerClosed) is not
+// treated as an error.
+func serveHTTP(ctx context.Context, srv *http.Server) error {
+	errCh := make(chan error, 1)
+	go func() {
+		err := srv.ListenAndServe()
+		if errors.Is(err, http.ErrServerClosed) {
+			err = nil
+		}
+		errCh <- err
+	}()
+
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return srv.Shutdown(shutdownCtx)
+	case err := <-errCh:
+		return err
+	}
+}
+
+// run wires the MCP server to the requested transport. It is the testable
+// core of main(): all configuration comes from the environment, but the
+// blocking serve loops honour ctx so callers (and tests) can stop them.
+func run(ctx context.Context, s *server.MCPServer, in io.Reader, out io.Writer) error {
+	if strings.ToLower(os.Getenv("TRANSPORT")) == "stdio" {
+		return runStdio(ctx, s, in, out)
+	}
+
+	env := loadHTTPEnv()
+	addr, srv, err := newHTTPServer(server.NewStreamableHTTPServer(s), env)
+	if err != nil {
+		return err
+	}
+
+	authState := "no auth token"
+	if env.authToken != "" {
+		authState = "auth enabled"
+	}
+	log.Printf("GenieACS MCP bridge listening on %s/mcp (Host/Origin guard enabled, %s)", addr, authState)
+	return serveHTTP(ctx, srv)
+}
+
 func main() {
 	log.Printf("GenieACS MCP %s starting…", version.String())
 	// Load config & initialise GenieACS client
@@ -223,30 +279,11 @@ func main() {
 	acs := client.NewACS(cfg.BaseURL, cfg.User, cfg.Pass)
 	s := newMCPServer(acs, cfg.DeviceLimit)
 
-	transport := strings.ToLower(os.Getenv("TRANSPORT"))
-	if transport == "stdio" {
-		stdioSrv := server.NewStdioServer(s)
-		log.Println("GenieACS MCP bridge running on stdio")
-		if err := stdioSrv.Listen(context.Background(), os.Stdin, os.Stdout); err != nil {
-			log.Fatalf("stdio server error: %v", err)
-		}
-		return
-	}
+	// Stop cleanly on SIGINT/SIGTERM so containers shut down gracefully.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	httpSrv := server.NewStreamableHTTPServer(s)
-	env := loadHTTPEnv()
-	addr, srv, err := newHTTPServer(httpSrv, env)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-
-	authState := "no auth token"
-	if env.authToken != "" {
-		authState = "auth enabled"
-	}
-
-	log.Printf("GenieACS MCP bridge listening on %s/mcp (Host/Origin guard enabled, %s)", addr, authState)
-	if err := srv.ListenAndServe(); err != nil {
+	if err := run(ctx, s, os.Stdin, os.Stdout); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
 }
