@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/subtle"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -121,6 +122,49 @@ func buildHTTPHandler(mcpHandler http.Handler, addr, authToken, extraHosts, extr
 	return dnsRebindGuard(handler, allowedHosts, allowedOrigins)
 }
 
+// httpEnv is the subset of environment configuration the HTTP transport needs.
+type httpEnv struct {
+	addr          string
+	authToken     string
+	allowedHosts  string
+	allowedOrigin string
+}
+
+// loadHTTPEnv reads the HTTP-transport settings from the environment, applying
+// the loopback default for the listen address.
+func loadHTTPEnv() httpEnv {
+	addr := os.Getenv("MCP_LISTEN_ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:8080"
+	}
+	return httpEnv{
+		addr:          addr,
+		authToken:     os.Getenv("MCP_AUTH_TOKEN"),
+		allowedHosts:  os.Getenv("MCP_ALLOWED_HOSTS"),
+		allowedOrigin: os.Getenv("MCP_ALLOWED_ORIGINS"),
+	}
+}
+
+// newHTTPServer builds the listening address and *http.Server for the HTTP
+// transport, mounting the guarded MCP handler at /mcp. It returns an error
+// when an auth token is required (non-loopback listener) but absent, so the
+// caller can decide how to fail. The returned server is not yet listening.
+func newHTTPServer(mcpHandler http.Handler, env httpEnv) (string, *http.Server, error) {
+	if env.authToken == "" && !isLoopbackAddr(env.addr) {
+		return "", nil, errAuthTokenRequired
+	}
+
+	// Validate Host/Origin on every request to prevent DNS rebinding from a
+	// malicious web page reaching this listener (GHSA-cmwv-wf9p-p8wx).
+	handler := buildHTTPHandler(mcpHandler, env.addr, env.authToken, env.allowedHosts, env.allowedOrigin)
+
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", handler)
+	return env.addr, &http.Server{Addr: env.addr, Handler: mux}, nil
+}
+
+var errAuthTokenRequired = errors.New("MCP_AUTH_TOKEN is required when MCP_LISTEN_ADDR is not loopback")
+
 func bearerAuth(next http.Handler, token string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -183,30 +227,19 @@ func main() {
 	}
 
 	httpSrv := server.NewStreamableHTTPServer(s)
-	addr := os.Getenv("MCP_LISTEN_ADDR")
-	if addr == "" {
-		addr = "127.0.0.1:8080"
+	env := loadHTTPEnv()
+	addr, srv, err := newHTTPServer(httpSrv, env)
+	if err != nil {
+		log.Fatalf("%v", err)
 	}
-
-	authToken := os.Getenv("MCP_AUTH_TOKEN")
-	if authToken == "" && !isLoopbackAddr(addr) {
-		log.Fatal("MCP_AUTH_TOKEN is required when MCP_LISTEN_ADDR is not loopback")
-	}
-
-	// Validate Host/Origin on every request to prevent DNS rebinding from a
-	// malicious web page reaching this listener (GHSA-cmwv-wf9p-p8wx).
-	handler := buildHTTPHandler(httpSrv, addr, authToken,
-		os.Getenv("MCP_ALLOWED_HOSTS"), os.Getenv("MCP_ALLOWED_ORIGINS"))
 
 	authState := "no auth token"
-	if authToken != "" {
+	if env.authToken != "" {
 		authState = "auth enabled"
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle("/mcp", handler)
 	log.Printf("GenieACS MCP bridge listening on %s/mcp (Host/Origin guard enabled, %s)", addr, authState)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
 }

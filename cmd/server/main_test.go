@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -127,6 +128,72 @@ func TestBearerAuth(t *testing.T) {
 		h.ServeHTTP(rec, req)
 		if rec.Code != http.StatusUnauthorized {
 			t.Fatalf("missing token got %d, want 401", rec.Code)
+		}
+	})
+}
+
+func TestLoadHTTPEnv(t *testing.T) {
+	t.Setenv("MCP_LISTEN_ADDR", "")
+	t.Setenv("MCP_AUTH_TOKEN", "")
+	t.Setenv("MCP_ALLOWED_HOSTS", "")
+	t.Setenv("MCP_ALLOWED_ORIGINS", "")
+	if env := loadHTTPEnv(); env.addr != "127.0.0.1:8080" {
+		t.Errorf("default addr = %q, want 127.0.0.1:8080", env.addr)
+	}
+
+	t.Setenv("MCP_LISTEN_ADDR", "0.0.0.0:9000")
+	t.Setenv("MCP_AUTH_TOKEN", "tok")
+	t.Setenv("MCP_ALLOWED_HOSTS", "a.example")
+	t.Setenv("MCP_ALLOWED_ORIGINS", "https://a.example")
+	env := loadHTTPEnv()
+	if env.addr != "0.0.0.0:9000" || env.authToken != "tok" ||
+		env.allowedHosts != "a.example" || env.allowedOrigin != "https://a.example" {
+		t.Errorf("loadHTTPEnv did not read all vars: %+v", env)
+	}
+}
+
+func TestNewHTTPServer(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	t.Run("loopback without token is allowed and guards /mcp", func(t *testing.T) {
+		addr, srv, err := newHTTPServer(backend, httpEnv{addr: "127.0.0.1:8080"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if addr != "127.0.0.1:8080" || srv == nil || srv.Addr != "127.0.0.1:8080" {
+			t.Fatalf("unexpected addr/srv: addr=%q srv=%v", addr, srv)
+		}
+		// Legitimate loopback request passes the mounted guard.
+		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/mcp", nil)
+		req.Host = "127.0.0.1:8080"
+		rec := httptest.NewRecorder()
+		srv.Handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Errorf("loopback /mcp got %d, want 200", rec.Code)
+		}
+		// Rebind request is rejected.
+		req2 := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/mcp", nil)
+		req2.Host = "attacker.example:8080"
+		rec2 := httptest.NewRecorder()
+		srv.Handler.ServeHTTP(rec2, req2)
+		if rec2.Code != http.StatusForbidden {
+			t.Errorf("rebind /mcp got %d, want 403", rec2.Code)
+		}
+	})
+
+	t.Run("non-loopback without token errors", func(t *testing.T) {
+		_, _, err := newHTTPServer(backend, httpEnv{addr: "0.0.0.0:8080"})
+		if !errors.Is(err, errAuthTokenRequired) {
+			t.Fatalf("err = %v, want errAuthTokenRequired", err)
+		}
+	})
+
+	t.Run("non-loopback with token is allowed", func(t *testing.T) {
+		_, srv, err := newHTTPServer(backend, httpEnv{addr: "0.0.0.0:8080", authToken: "tok", allowedHosts: "acs.example.com"})
+		if err != nil || srv == nil {
+			t.Fatalf("unexpected error: %v", err)
 		}
 	})
 }
