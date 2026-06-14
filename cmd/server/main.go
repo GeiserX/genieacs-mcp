@@ -176,12 +176,9 @@ func bearerAuth(next http.Handler, token string) http.Handler {
 	})
 }
 
-func main() {
-	log.Printf("GenieACS MCP %s starting…", version.String())
-	// Load config & initialise GenieACS client
-	cfg := config.LoadACSConfig()
-	acs := client.NewACS(cfg.BaseURL, cfg.User, cfg.Pass)
-	// Create MCP server
+// newMCPServer builds the MCP server with all GenieACS resources and tools
+// registered against acs.
+func newMCPServer(acs *client.ACSClient, deviceLimit int) *server.MCPServer {
 	s := server.NewMCPServer(
 		"GenieACS MCP Bridge",
 		version.Version,
@@ -193,7 +190,7 @@ func main() {
 	resources.RegisterDevice(s, acs)
 	resources.RegisterFile(s, acs)
 	resources.RegisterTasks(s, acs)
-	resources.RegisterCatalogue(s, acs, cfg.DeviceLimit)
+	resources.RegisterCatalogue(s, acs, deviceLimit)
 	resources.RegisterPresets(s, acs)
 	resources.RegisterProvisions(s, acs)
 	resources.RegisterFaults(s, acs)
@@ -215,6 +212,16 @@ func main() {
 	register(tools.NewConnectionRequest)
 	register(tools.NewDeleteTask)
 	register(tools.NewRetryTask)
+
+	return s
+}
+
+func main() {
+	log.Printf("GenieACS MCP %s starting…", version.String())
+	// Load config & initialise GenieACS client
+	cfg := config.LoadACSConfig()
+	acs := client.NewACS(cfg.BaseURL, cfg.User, cfg.Pass)
+	s := newMCPServer(acs, cfg.DeviceLimit)
 
 	transport := strings.ToLower(os.Getenv("TRANSPORT"))
 	if transport == "stdio" {

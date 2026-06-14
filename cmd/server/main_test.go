@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/geiserx/genieacs-mcp/client"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 func TestIsLoopbackAddr(t *testing.T) {
@@ -130,6 +133,21 @@ func TestBearerAuth(t *testing.T) {
 			t.Fatalf("missing token got %d, want 401", rec.Code)
 		}
 	})
+}
+
+func TestNewMCPServer(t *testing.T) {
+	// Registering all resources and tools must not panic, and the server must
+	// be usable as an HTTP handler backend.
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	s := newMCPServer(acs, 500)
+	if s == nil {
+		t.Fatal("newMCPServer returned nil")
+	}
+	httpSrv := server.NewStreamableHTTPServer(s)
+	_, srv, err := newHTTPServer(httpSrv, httpEnv{addr: "127.0.0.1:8080"})
+	if err != nil || srv == nil {
+		t.Fatalf("server build failed: %v", err)
+	}
 }
 
 func TestLoadHTTPEnv(t *testing.T) {
