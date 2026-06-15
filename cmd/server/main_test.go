@@ -20,6 +20,8 @@ func TestIsLoopbackAddr(t *testing.T) {
 		"localhost:8080": true,
 		"[::1]:8080":     true,
 		"0.0.0.0:8080":   false,
+		":8080":          false, // empty host = wildcard bind (all interfaces), not loopback
+		"[::]:8080":      false, // IPv6 wildcard bind
 		"192.168.1.5:80": false,
 		"example.com:80": false,
 		"garbage":        false,
@@ -212,14 +214,21 @@ func TestRun_HTTPTransport_ShutsDownOnContextCancel(t *testing.T) {
 }
 
 func TestRun_HTTPTransport_AuthRequiredError(t *testing.T) {
-	t.Setenv("TRANSPORT", "")
-	t.Setenv("MCP_LISTEN_ADDR", "0.0.0.0:0")
-	t.Setenv("MCP_AUTH_TOKEN", "")
-	acs := client.NewACS("http://127.0.0.1:7557", "", "")
-	s := newMCPServer(acs, 500)
-	err := run(context.Background(), s, nil, nil)
-	if !errors.Is(err, errAuthTokenRequired) {
-		t.Fatalf("run() err = %v, want errAuthTokenRequired", err)
+	// A bare ":port" (empty host) and an explicit "0.0.0.0:port" both bind all
+	// interfaces, so neither may start without a token (regression guard for
+	// the loopback-wildcard fail-open).
+	for _, addr := range []string{"0.0.0.0:0", ":0"} {
+		t.Run(addr, func(t *testing.T) {
+			t.Setenv("TRANSPORT", "")
+			t.Setenv("MCP_LISTEN_ADDR", addr)
+			t.Setenv("MCP_AUTH_TOKEN", "")
+			acs := client.NewACS("http://127.0.0.1:7557", "", "")
+			s := newMCPServer(acs, 500)
+			err := run(context.Background(), s, nil, nil)
+			if !errors.Is(err, errAuthTokenRequired) {
+				t.Fatalf("run(%q) err = %v, want errAuthTokenRequired", addr, err)
+			}
+		})
 	}
 }
 

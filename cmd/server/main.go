@@ -28,7 +28,13 @@ func isLoopbackAddr(addr string) bool {
 	if err != nil {
 		return false
 	}
-	if host == "" || host == "localhost" {
+	// An empty or wildcard host (e.g. ":8080", "0.0.0.0:8080", "[::]:8080")
+	// binds all interfaces, so it must NOT be treated as loopback — otherwise
+	// the listener would start LAN-wide without requiring MCP_AUTH_TOKEN.
+	if isWildcardHost(host) {
+		return false
+	}
+	if host == "localhost" {
 		return true
 	}
 	ip := net.ParseIP(host)
