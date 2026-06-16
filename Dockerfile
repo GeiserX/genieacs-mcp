@@ -20,7 +20,7 @@ RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o /out/genieacs-mcp ./cmd/server
 # ───────────────────────────────────────────────
 # Stage 2 – tiny runtime image
 # ───────────────────────────────────────────────
-FROM alpine:3.23
+FROM alpine:3.24
 LABEL io.modelcontextprotocol.server.name="io.github.GeiserX/genieacs-mcp"
 
 COPY --from=builder /out/genieacs-mcp /usr/local/bin/genieacs-mcp
