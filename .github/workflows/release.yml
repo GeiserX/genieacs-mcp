@@ -6,7 +6,7 @@ on:
 
 jobs:
   goreleaser:
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     permissions: write-all
     steps:
       - uses: actions/checkout@v6
@@ -29,7 +29,7 @@ jobs:
 
   npm-publish:
     needs: goreleaser
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
