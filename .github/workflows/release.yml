@@ -30,15 +30,18 @@ jobs:
   npm-publish:
     needs: goreleaser
     runs-on: ubuntu-latest
+    # npm trusted publishing: GitHub's OIDC token proves who publishes, so no NPM_TOKEN to expire.
     permissions:
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          # Trusted publishing needs npm 11.5.1+ and Node 22.14+; Node 24 ships both, so no ad-hoc npm install.
+          node-version: '24'
+          # A stale runner cache could hold an early 24.x with npm below 11.5.1.
+          check-latest: true
           registry-url: 'https://registry.npmjs.org'
       - run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
-      - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --loglevel verbose
