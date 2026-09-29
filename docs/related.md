@@ -1,4 +1,4 @@
-# Related projects and listings
+# Related projects
 
 ## Listings
 
@@ -20,7 +20,7 @@ This project is part of a broader set of tools for working with GenieACS:
 | [genieacs-container](https://github.com/GeiserX/genieacs-container) | Docker + Helm | Production-ready multi-arch Docker image and Helm chart |
 | [genieacs-ansible](https://github.com/GeiserX/genieacs-ansible) | Ansible Collection | Dynamic inventory plugin and device management modules |
 | [genieacs-ha](https://github.com/GeiserX/genieacs-ha) | HA Integration | Home Assistant integration for TR-069 monitoring |
-| [n8n-nodes-genieacs](https://github.com/GeiserX/n8n-nodes-genieacs) | n8n Node | Workflow automation for GenieACS |
+| [n8n-nodes-genieacs](https://github.com/GeiserX/n8n-nodes-genieacs) (archived) | n8n Node | Workflow automation for GenieACS; no longer maintained |
 | [genieacs-services](https://github.com/GeiserX/genieacs-services) | Service Defs | Systemd/Supervisord service definitions |
 | [genieacs-sim-container](https://github.com/GeiserX/genieacs-sim-container) | Simulator | Docker-based GenieACS simulator for testing |
 

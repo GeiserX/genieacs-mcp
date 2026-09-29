@@ -3,7 +3,7 @@
   "mcpName": "io.github.GeiserX/genieacs-mcp",
   "version": "0.3.3",
   "description": "MCP server that bridges any GenieACS (TR-069 ACS) instance, exposing device data, firmware management, and CPE actions over JSON-RPC",
-  "license": "GPL-3.0",
+  "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/GeiserX/genieacs-mcp.git"

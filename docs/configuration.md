@@ -23,24 +23,38 @@
 
 Put them in a `.env` file (from `.env.example`) or set them in the environment. 
 
-## Example configuration for client LLMs
+## Client configuration
+
+Over stdio, which the npm package always uses, a client that reads an `mcpServers` block starts the
+server itself:
 
 ```json
 {
-  "schema_version": "v1",
-  "name_for_human": "GenieACS-MCP",
-  "name_for_model": "genieacs_mcp",
-  "description_for_human": "Full CPE management through GenieACS — parameter read/write, presets, provisions, firmware, tags, search, and task lifecycle.",
-  "description_for_model": "Interact with a GenieACS TR-069 Auto-Configuration-Server (ACS) that manages CPE devices (routers, ONTs, gateways). First call initialize, then reuse the returned session id in header \"Mcp-Session-Id\" for every other call. Use readResource to fetch URIs that begin with genieacs:// (devices, presets, provisions, faults). Use listTools to discover available actions (parameter read/write, presets, provisions, tags, search, task management) and callTool to execute them.",
-  "auth": { "type": "bearer", "token": "<MCP_AUTH_TOKEN value>" },
-  "api": {
-    "type": "jsonrpc-mcp",
-    "url":  "http://localhost:8080/mcp",
-    "init_method": "initialize",
-    "session_header": "Mcp-Session-Id"
-  },
-  "logo_url": "https://raw.githubusercontent.com/GeiserX/genieacs-container/main/extra/logo.png",
-  "contact_email": "acsdesk@protonmail.com",
-  "legal_info_url": "https://github.com/GeiserX/genieacs-mcp/blob/main/LICENSE"
+  "mcpServers": {
+    "genieacs": {
+      "command": "npx",
+      "args": ["-y", "genieacs-mcp"],
+      "env": {
+        "ACS_URL": "http://localhost:7557",
+        "ACS_USER": "admin",
+        "ACS_PASS": "admin"
+      }
+    }
+  }
+}
+```
+
+Over HTTP, for a server you already run (the Docker image, or the binary without `TRANSPORT=stdio`), a
+client that supports remote servers connects to the `/mcp` endpoint. Drop `headers` if you did not set
+`MCP_AUTH_TOKEN`:
+
+```json
+{
+  "mcpServers": {
+    "genieacs": {
+      "url": "http://localhost:8080/mcp",
+      "headers": { "Authorization": "Bearer <MCP_AUTH_TOKEN>" }
+    }
+  }
 }
 ```
