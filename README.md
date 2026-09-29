@@ -7,154 +7,40 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/genieacs-mcp"><img src="https://img.shields.io/npm/v/genieacs-mcp?style=flat-square&logo=npm" alt="npm"/></a>
   <a href="https://github.com/GeiserX/genieacs-mcp/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/GeiserX/genieacs-mcp/ci.yml?style=flat-square&logo=github&label=CI" alt="CI"/></a>
-  <a href="https://codecov.io/gh/GeiserX/genieacs-mcp"><img src="https://img.shields.io/codecov/c/github/GeiserX/genieacs-mcp?style=flat-square&logo=codecov&label=Coverage" alt="Coverage"/></a>
-  <img src="https://img.shields.io/badge/Go-1.24-blue?style=flat-square&logo=go&logoColor=white" alt="Go"/>
   <a href="https://hub.docker.com/r/drumsergio/genieacs-mcp"><img src="https://img.shields.io/docker/pulls/drumsergio/genieacs-mcp?style=flat-square&logo=docker" alt="Docker Pulls"/></a>
   <a href="https://github.com/GeiserX/genieacs-mcp/stargazers"><img src="https://img.shields.io/github/stars/GeiserX/genieacs-mcp?style=flat-square&logo=github" alt="GitHub Stars"/></a>
   <a href="https://github.com/GeiserX/genieacs-mcp/blob/main/LICENSE"><img src="https://img.shields.io/github/license/GeiserX/genieacs-mcp?style=flat-square" alt="License"/></a>
 </p>
-<p align="center">
-  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Official%20Registry-E6522C?style=flat-square" alt="Official MCP Registry"/></a>
-  <a href="https://glama.ai/mcp/servers/GeiserX/genieacs-mcp"><img src="https://glama.ai/mcp/servers/GeiserX/genieacs-mcp/badges/score.svg" alt="Glama MCP Server" /></a>
-  <a href="https://mcpservers.org/servers/geiserx/genieacs-mcp"><img src="https://img.shields.io/badge/MCPServers.org-listed-green?style=flat-square" alt="MCPServers.org"/></a>
-  <a href="https://mcp.so/server/genieacs-mcp"><img src="https://img.shields.io/badge/mcp.so-listed-blue?style=flat-square" alt="mcp.so"/></a>
-  <a href="https://github.com/toolsdk-ai/toolsdk-mcp-registry"><img src="https://img.shields.io/badge/ToolSDK-Registry-orange?style=flat-square" alt="ToolSDK Registry"/></a>
-  <a href="https://github.com/punkpeye/awesome-mcp-servers#readme"><img src="https://img.shields.io/badge/listed%20on-awesome--mcp--servers-E6522C?style=flat-square" alt="listed on awesome-mcp-servers"/></a>
-</p>
 
 <p align="center"><strong>A tiny bridge that exposes any GenieACS instance as an MCP v1 (JSON-RPC for LLMs) server written in Go.</strong></p>
 
----
+LLMs use it to read and manage the CPE devices (routers, ONTs, gateways) that your [GenieACS](https://github.com/genieacs/genieacs) TR-069 server controls, over HTTP or stdio.
 
-## ✨ What you get
+## Features
 
-| Type            | What for                                                                   | MCP URI / Tool id                |
-|-----------------|----------------------------------------------------------------------------|----------------------------------|
-| **Resources**   | Consume GenieACS data read-only                                            | `genieacs://device/{id}`<br>`genieacs://file/{name}`<br>`genieacs://tasks/{id}`<br>`genieacs://devices/list`<br>`genieacs://presets/list`<br>`genieacs://provisions/list`<br>`genieacs://faults/{id}` |
-| **Tools**       | Invoke actions on a CPE through GenieACS                                   | `reboot_device`<br>`download_firmware`<br>`refresh_parameter`<br>`set_parameter`<br>`get_parameter`<br>`manage_preset`<br>`manage_provision`<br>`search_devices`<br>`tag_device`<br>`connection_request`<br>`delete_task`<br>`retry_task` |
+- Read-only resources for devices, files, tasks, presets, provisions and faults (`genieacs://device/{id}`, `genieacs://devices/list`, ...).
+- Tools to reboot a device, push firmware, refresh, read and set parameters, and send a connection request.
+- Manage presets, provisions and device tags; search devices; delete or retry tasks.
+- One JSON-RPC endpoint (`/mcp`) over HTTP, or stdio with `TRANSPORT=stdio`.
+- The HTTP transport checks `Host` and `Origin` against DNS rebinding; `MCP_AUTH_TOKEN` adds bearer auth when you expose it.
+- Ships as a Docker image, an npm package (`npx genieacs-mcp`) and multi-arch Go binaries.
 
-Everything is exposed over a single JSON-RPC endpoint (`/mcp`).  
-LLMs / Agents can: `initialize → readResource → listTools → callTool` … and so on.
-
----
-
-## 🚀 Quick-start (Docker Compose)
-
-Follow instructions from https://github.com/GeiserX/genieacs-container, it is included in the docker compose file there.
-
-## 📦 Install via npm (stdio transport)
+## Quick start
 
 ```sh
 npx genieacs-mcp
 ```
 
-Or install globally:
+Set `ACS_URL` (and `ACS_USER` / `ACS_PASS` if your NBI needs basic auth) first. For Docker, the server is already in the compose file of [genieacs-container](https://github.com/GeiserX/genieacs-container). Local builds are in [Installation](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/installation.md).
 
-```sh
-npm install -g genieacs-mcp
-genieacs-mcp
-```
+## Documentation
 
-This downloads the pre-built Go binary for your platform and runs it with stdio transport, compatible with any MCP client.
+- [Installation](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/installation.md): Docker Compose, npm, local build
+- [Configuration](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/configuration.md): environment variables, HTTP security and an example client config
+- [Resources and tools](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/usage.md)
+- [Development](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/development.md): testing, contributing, credits
+- [Related projects and listings](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/related.md): the GenieACS ecosystem and other MCP servers
 
-## 🛠 Local build
+## License
 
-```sh
-git clone https://github.com/GeiserX/genieacs-mcp
-cd genieacs-mcp
-
-# (optional) create .env from the sample
-cp .env.example .env && $EDITOR .env
-
-go run ./cmd/server
-```
-
-## 🔧 Configuration
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ACS_URL` | http://localhost:7557 | GenieACS NBI endpoint (without trailing /) |
-| `ACS_USER` | _(empty)_ | GenieACS NBI basic-auth username |
-| `ACS_PASS` | _(empty)_ | GenieACS NBI basic-auth password |
-| `TRANSPORT` | _(empty = HTTP)_ | Set to `stdio` for stdio transport |
-| `DEVICE_LIMIT` | 500 | Max devices returned by `genieacs://devices/list` |
-| `MCP_LISTEN_ADDR` | 127.0.0.1:8080 | HTTP listen address (only used when TRANSPORT is not stdio) |
-| `MCP_AUTH_TOKEN` | _(empty)_ | Bearer token for HTTP transport auth. **Required** when `MCP_LISTEN_ADDR` is non-loopback |
-| `MCP_ALLOWED_HOSTS` | _(empty)_ | Comma-separated extra `Host` header values to accept (e.g. a reverse-proxy domain). Loopback names on the listen port are always allowed |
-| `MCP_ALLOWED_ORIGINS` | _(empty)_ | Comma-separated extra browser `Origin` values to accept (e.g. `https://my-ai-app.com`) |
-
-> **Security — HTTP transport.** The HTTP transport validates the `Host` and
-> `Origin` headers on every request to prevent [DNS rebinding](https://en.wikipedia.org/wiki/DNS_rebinding)
-> from a malicious web page reaching a local listener. Requests with an
-> untrusted `Host`, or a present-but-untrusted `Origin`, are rejected with
-> `403`. Loopback access works with no configuration; if you expose the server
-> through a reverse proxy or a hostname, add that name to `MCP_ALLOWED_HOSTS`
-> (and `MCP_ALLOWED_ORIGINS` for browser clients). The `stdio` transport is
-> unaffected and remains the recommended mode for local MCP clients.
-
-Put them in a `.env` file (from `.env.example`) or set them in the environment. 
-
-
-## Testing
-Tested with [Inspector](https://modelcontextprotocol.io/docs/tools/inspector) and it is currently fully working. Before making a PR, make sure this MCP server behaves well via this medium.
-
-Lacks Testing with actual MCP clients (client LLMs), so please, submit your PRs to improve descriptions in case it fails to adequately match the services offered by this MCP server.
-
-## Example configuration for client LLMs:
-
-```json
-{
-  "schema_version": "v1",
-  "name_for_human": "GenieACS-MCP",
-  "name_for_model": "genieacs_mcp",
-  "description_for_human": "Full CPE management through GenieACS — parameter read/write, presets, provisions, firmware, tags, search, and task lifecycle.",
-  "description_for_model": "Interact with a GenieACS TR-069 Auto-Configuration-Server (ACS) that manages CPE devices (routers, ONTs, gateways). First call initialize, then reuse the returned session id in header \"Mcp-Session-Id\" for every other call. Use readResource to fetch URIs that begin with genieacs:// (devices, presets, provisions, faults). Use listTools to discover available actions (parameter read/write, presets, provisions, tags, search, task management) and callTool to execute them.",
-  "auth": { "type": "bearer", "token": "<MCP_AUTH_TOKEN value>" },
-  "api": {
-    "type": "jsonrpc-mcp",
-    "url":  "http://localhost:8080/mcp",
-    "init_method": "initialize",
-    "session_header": "Mcp-Session-Id"
-  },
-  "logo_url": "https://raw.githubusercontent.com/GeiserX/genieacs-container/main/extra/logo.png",
-  "contact_email": "acsdesk@protonmail.com",
-  "legal_info_url": "https://github.com/GeiserX/genieacs-mcp/blob/main/LICENSE"
-}
-```
-
-## Credits
-[GenieACS](https://github.com/genieacs/genieacs) – the best open-source ACS
-
-[MCP-GO](https://github.com/mark3labs/mcp-go) – modern MCP implementation
-
-[GoReleaser](https://goreleaser.com/) – painless multi-arch releases
-
-## Maintainers
-
-[@GeiserX](https://github.com/GeiserX).
-
-## Contributing
-
-Feel free to dive in! [Open an issue](https://github.com/GeiserX/genieacs-mcp/issues/new) or submit PRs.
-
-GenieACS-MCP follows the [Contributor Covenant](http://contributor-covenant.org/version/2/1/) Code of Conduct.
-
-## GenieACS Ecosystem
-
-This project is part of a broader set of tools for working with GenieACS:
-
-| Project | Type | Description |
-|---------|------|-------------|
-| [genieacs-docker](https://github.com/GeiserX/genieacs-docker) | Docker + Helm | Production-ready multi-arch Docker image and Helm chart |
-| [genieacs-ansible](https://github.com/GeiserX/genieacs-ansible) | Ansible Collection | Dynamic inventory plugin and device management modules |
-| [genieacs-ha](https://github.com/GeiserX/genieacs-ha) | HA Integration | Home Assistant integration for TR-069 monitoring |
-| [n8n-nodes-genieacs](https://github.com/GeiserX/n8n-nodes-genieacs) | n8n Node | Workflow automation for GenieACS |
-| [genieacs-services](https://github.com/GeiserX/genieacs-services) | Service Defs | Systemd/Supervisord service definitions |
-| [genieacs-sim-container](https://github.com/GeiserX/genieacs-sim-container) | Simulator | Docker-based GenieACS simulator for testing |
-
-## Other MCP Servers by GeiserX
-
-- [cashpilot-mcp](https://github.com/GeiserX/cashpilot-mcp) — Passive income monitoring
-- [duplicacy-mcp](https://github.com/GeiserX/duplicacy-mcp) — Backup health monitoring
-- [lynxprompt-mcp](https://github.com/GeiserX/lynxprompt-mcp) — AI configuration blueprints
-- [pumperly-mcp](https://github.com/GeiserX/pumperly-mcp) — Fuel and EV charging prices
-- [telegram-archive-mcp](https://github.com/GeiserX/telegram-archive-mcp) — Telegram message archive
+[GPL-3.0](https://github.com/GeiserX/genieacs-mcp/blob/main/LICENSE)
