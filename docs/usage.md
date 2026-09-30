@@ -13,9 +13,7 @@ tools it can call, and which of them change something.
 - "Reboot 202BC1-BM632w-000002 and tell me when it is back" (`reboot_device`, then `refresh_parameter` for
   the uptime)
 
-<p align="center">
-  <img src="images/screenshots/tools.png" alt="MCP Inspector, Tools tab: the genieacs-mcp tool list (ten of the twelve fit the view), search_devices selected with its description and its query and limit fields" width="100%">
-</p>
+![MCP Inspector, Tools tab: the genieacs-mcp tool list (ten of the twelve fit the view), search_devices selected with its description and its query and limit fields](images/screenshots/tools.png)
 
 ## Resources (read-only)
 
@@ -29,9 +27,7 @@ tools it can call, and which of them change something.
 | `genieacs://presets/list` | Every preset on the ACS. |
 | `genieacs://provisions/list` | Every provision script on the ACS. |
 
-<p align="center">
-  <img src="images/screenshots/resources.png" alt="MCP Inspector, Resources tab: the three list resources and four resource templates of genieacs-mcp, with genieacs://devices/list read and six simulated device ids in the preview" width="100%">
-</p>
+![MCP Inspector, Resources tab: the three list resources and four resource templates of genieacs-mcp, with genieacs://devices/list read and six simulated device ids in the preview](images/screenshots/resources.png)
 
 ## Tools
 
@@ -55,9 +51,7 @@ that act.
 | `delete_task` | `task_id` | Removes a queued task. | acts |
 | `retry_task` | `task_id` | Re-queues a failed task. | acts |
 
-<p align="center">
-  <img src="images/screenshots/set-parameter.png" alt="MCP Inspector, Tools tab: set_parameter run on a simulated device to change its WiFi SSID, the result showing the setParameterValues task document the ACS returned" width="100%">
-</p>
+![MCP Inspector, Tools tab: set_parameter run on a simulated device to change its WiFi SSID, the result showing the setParameterValues task document the ACS returned](images/screenshots/set-parameter.png)
 
 ## On the wire
 

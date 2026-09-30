@@ -28,3 +28,6 @@ dist/
 bin/
 node_modules/
 .mcpregistry_*
+
+# MkDocs build output
+site/
