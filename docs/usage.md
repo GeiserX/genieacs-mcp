@@ -13,9 +13,7 @@ tools it can call, and which of them change something.
 - "Reboot 202BC1-BM632w-000002 and tell me when it is back" (`reboot_device`, then `refresh_parameter` for
   the uptime)
 
-<p align="center">
-  <img src="images/screenshots/tools.png" alt="MCP Inspector, Tools tab: the genieacs-mcp tool list (ten of the twelve fit the view), search_devices selected with its description and its query and limit fields" width="100%">
-</p>
+![MCP Inspector, Tools tab: the genieacs-mcp tool list (ten of the twelve fit the view), search_devices selected with its description and its query and limit fields](images/screenshots/tools.png)
 
 ## Resources (read-only)
 
@@ -29,9 +27,7 @@ tools it can call, and which of them change something.
 | `genieacs://presets/list` | Every preset on the ACS. |
 | `genieacs://provisions/list` | Every provision script on the ACS. |
 
-<p align="center">
-  <img src="images/screenshots/resources.png" alt="MCP Inspector, Resources tab: the three list resources and four resource templates of genieacs-mcp, with genieacs://devices/list read and six simulated device ids in the preview" width="100%">
-</p>
+![MCP Inspector, Resources tab: the three list resources and four resource templates of genieacs-mcp, with genieacs://devices/list read and six simulated device ids in the preview](images/screenshots/resources.png)
 
 ## Tools
 
@@ -45,7 +41,7 @@ that act.
 | `search_devices` | `query` (JSON string, MongoDB syntax), `limit` (default 50) | Finds devices by tag, manufacturer, model, firmware, last inform or any parameter. Comparison operators only (`$eq`, `$ne`, `$gt`, `$lt`, `$gte`, `$lte`, `$regex`, `$in`, `$nin`, `$exists`). | reads |
 | `get_parameter` | `device_id`, `parameter_path` (one path or a comma-separated list) | Returns the last values the ACS has for those parameters, without contacting the device. Stale if the device has not informed recently. | reads |
 | `refresh_parameter` | `device_id`, `parameter` | Asks the device to report one parameter's current value; read it afterwards from `genieacs://device/{id}`. | acts |
-| `set_parameter` | `device_id`, `parameter_values` (JSON array of `[path, value]` or `[path, value, xsdType]` tuples, for example `[["InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID","Lab-2","xsd:string"]]`) | Writes parameter values on the device; the type is inferred when omitted. | acts |
+| `set_parameter` | `device_id`, `parameter_values` (JSON array of `[path, value]` or `[path, value, xsdType]` tuples; example below the table) | Writes parameter values on the device; the type is inferred when omitted. | acts |
 | `reboot_device` | `device_id` | Reboots the device. No confirmation that it came back; check uptime afterwards. | acts |
 | `download_firmware` | `device_id`, `file_id`, `filename` (optional) | Tells the device to download and apply a file stored on the ACS. | acts |
 | `connection_request` | `device_id` | Wakes the device so it contacts the ACS now. Fails with 504 when the device is unreachable (NAT, offline). | acts |
@@ -55,9 +51,19 @@ that act.
 | `delete_task` | `task_id` | Removes a queued task. | acts |
 | `retry_task` | `task_id` | Re-queues a failed task. | acts |
 
-<p align="center">
-  <img src="images/screenshots/set-parameter.png" alt="MCP Inspector, Tools tab: set_parameter run on a simulated device to change its WiFi SSID, the result showing the setParameterValues task document the ACS returned" width="100%">
-</p>
+A `parameter_values` example for `set_parameter`, renaming the WiFi network:
+
+```json
+[
+  [
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID",
+    "Lab-2",
+    "xsd:string"
+  ]
+]
+```
+
+![MCP Inspector, Tools tab: set_parameter run on a simulated device to change its WiFi SSID, the result showing the setParameterValues task document the ACS returned](images/screenshots/set-parameter.png)
 
 ## On the wire
 
