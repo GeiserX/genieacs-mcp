@@ -1,7 +1,6 @@
 ---
 hide:
   - navigation
-  - toc
 ---
 
 # genieacs-mcp { .gm-visually-hidden }
