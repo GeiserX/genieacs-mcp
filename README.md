@@ -58,7 +58,7 @@ It worked when you ask "which devices does the ACS know about?" and the assistan
 - [Getting started](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/getting-started.md): npm, Docker Compose, local build, and what the first exchange looks like
 - [Configuration](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/configuration.md): every environment variable, the HTTP transport's security model, client config for stdio and HTTP
 - [Usage](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/usage.md): the 7 resources and 12 tools with their arguments, which ones act on devices, example prompts
-- [Development](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/development.md): build, test, how releases are made
+- [Development](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/development.md): tests, trying the server with MCP Inspector, contributing
 - [Related projects](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/related.md): the GenieACS family, other MCP servers, where this server is listed
 
 ## Related projects
