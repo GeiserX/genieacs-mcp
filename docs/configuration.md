@@ -21,6 +21,9 @@
 > (and `MCP_ALLOWED_ORIGINS` for browser clients). The `stdio` transport is
 > unaffected and remains the recommended mode for local MCP clients.
 
+There is no read-only mode. Ten of the twelve tools act on a device or change the ACS; the tool list is the
+same for every client, so approval prompts belong in the client.
+
 Put them in a `.env` file (from `.env.example`) or set them in the environment. 
 
 ## Client configuration
@@ -34,15 +37,14 @@ server itself:
     "genieacs": {
       "command": "npx",
       "args": ["-y", "genieacs-mcp"],
-      "env": {
-        "ACS_URL": "http://localhost:7557",
-        "ACS_USER": "admin",
-        "ACS_PASS": "admin"
-      }
+      "env": { "ACS_URL": "http://localhost:7557" }
     }
   }
 }
 ```
+
+Add `ACS_USER` and `ACS_PASS` only if you put basic auth in front of the NBI; GenieACS itself ships the NBI
+without authentication, and the `admin` / `admin` login of the web UI is not an NBI credential.
 
 Over HTTP, for a server you already run (the Docker image, or the binary without `TRANSPORT=stdio`), a
 client that supports remote servers connects to the `/mcp` endpoint. Drop `headers` if you did not set
