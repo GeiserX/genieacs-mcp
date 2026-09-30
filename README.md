@@ -51,15 +51,17 @@ Then add the server to a client that reads an `mcpServers` block (Claude Desktop
 }
 ```
 
-It worked when you ask "which devices does the ACS know about?" and the assistant answers with device ids such as `202BC1-BM632w-000000` (the demo stack) or your own. Docker, the HTTP transport and a local build are in [Getting started](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/getting-started.md).
+It worked when you ask "which devices does the ACS know about?" and the assistant answers with device ids such as `202BC1-BM632w-000000` (the demo stack) or your own. Docker, the HTTP transport and a local build are in [Getting started](https://geiserx.github.io/genieacs-mcp/getting-started/).
 
 ## Documentation
 
-- [Getting started](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/getting-started.md): npm, Docker Compose, local build, and what the first exchange looks like
-- [Configuration](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/configuration.md): every environment variable, the HTTP transport's security model, client config for stdio and HTTP
-- [Usage](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/usage.md): the 7 resources and 12 tools with their arguments, which ones act on devices, example prompts
-- [Development](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/development.md): tests, trying the server with MCP Inspector, contributing
-- [Related projects](https://github.com/GeiserX/genieacs-mcp/blob/main/docs/related.md): the GenieACS family, other MCP servers, where this server is listed
+The full documentation is at [geiserx.github.io/genieacs-mcp](https://geiserx.github.io/genieacs-mcp/).
+
+- [Getting started](https://geiserx.github.io/genieacs-mcp/getting-started/): npm, Docker Compose, local build, and what the first exchange looks like
+- [Configuration](https://geiserx.github.io/genieacs-mcp/configuration/): every environment variable, the HTTP transport's security model, client config for stdio and HTTP
+- [Usage](https://geiserx.github.io/genieacs-mcp/usage/): the 7 resources and 12 tools with their arguments, which ones act on devices, example prompts
+- [Development](https://geiserx.github.io/genieacs-mcp/development/): tests, trying the server with MCP Inspector, contributing
+- [Related projects](https://geiserx.github.io/genieacs-mcp/related/): the GenieACS family, other MCP servers, where this server is listed
 
 ## Related projects
 
