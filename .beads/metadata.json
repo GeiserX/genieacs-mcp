@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "genieacs_mcp",
+  "project_id": "b8823ceb-fb87-48ef-ad0b-29c9458b2d4f"
+}
