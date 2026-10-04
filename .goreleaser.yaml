@@ -17,6 +17,24 @@ builds:
       - -X github.com/geiserx/genieacs-mcp/version.Commit={{ .ShortCommit }}
       - -X github.com/geiserx/genieacs-mcp/version.Date={{ .Date }}
 
+# Signs the darwin binaries with a Developer ID certificate and notarizes them
+# with Apple, from Linux, before they are archived. Skipped when the secrets
+# are absent (pull requests, snapshots); release.yml fails a tag build that
+# lacks any of them, so a release is never shipped unsigned by accident.
+notarize:
+  macos:
+    - enabled: '{{ isEnvSet "MACOS_SIGN_P12" }}'
+      ids: [bin]
+      sign:
+        certificate: "{{ .Env.MACOS_SIGN_P12 }}"
+        password: "{{ .Env.MACOS_SIGN_PASSWORD }}"
+      notarize:
+        issuer_id: "{{ .Env.MACOS_NOTARY_ISSUER_ID }}"
+        key_id: "{{ .Env.MACOS_NOTARY_KEY_ID }}"
+        key: "{{ .Env.MACOS_NOTARY_KEY }}"
+        wait: true
+        timeout: 20m
+
 archives:
   - id: dist
     builds: [bin]
