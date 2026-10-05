@@ -1,0 +1,49 @@
+name: MCP Registry
+
+# Publishes server.json to the official MCP Registry (registry.modelcontextprotocol.io).
+# GitHub's OIDC token proves the workflow runs in GeiserX/genieacs-mcp, which is what
+# grants the io.github.GeiserX/* namespace, so there is no token to store or rotate.
+#
+# The release workflow calls this after the npm package is out, because the registry
+# checks that the npm version named in server.json exists and carries the same mcpName.
+# Run it by hand to publish a version that was released before this workflow existed.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # The npm wait below gives up after 15 minutes; this bounds everything else.
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.1
+      # sha256 of mcp-publisher_linux_amd64.tar.gz for that version, from the
+      # release's checksums file. Pinned here so a replaced release asset is
+      # refused instead of run with an OIDC token that can publish.
+      MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL -o mcp-publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
+      # npm can take minutes to serve a version it just accepted, and until it
+      # does the registry refuses server.json with a 404.
+      - name: Wait until npm serves the version in server.json
+        run: |
+          .github/scripts/wait-for-npm.sh \
+            "$(jq -r '.packages[0].identifier' server.json)" \
+            "$(jq -r '.packages[0].version' server.json)"
+      - run: ./mcp-publisher login github-oidc
+      - run: ./mcp-publisher publish

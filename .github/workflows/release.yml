@@ -5,7 +5,39 @@ on:
     tags: ["v*.*.*"]
 
 jobs:
+  check-version:
+    # Runs before anything publishes: the tag, package.json and server.json must
+    # name the same version, or postinstall.js and the MCP registry would point
+    # at a release that does not match.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Tag matches package.json and server.json
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          # server.json carries the version twice: its own, and packages[0].version,
+          # the npm version the MCP registry installs.
+          for field in "package.json:.version" "server.json:.version" "server.json:.packages[0].version"; do
+            f="${field%%:*}"
+            got=$(node -p "require('./$f')${field#*:}")
+            if [ "$got" != "$v" ]; then
+              echo "::error file=$f::${field#*:} is $got, the tag says $v"
+              exit 1
+            fi
+          done
+          # packages[1] is the Docker image; its tag must be this release's.
+          got=$(node -p "require('./server.json').packages[1].identifier")
+          case "$got" in
+            *":v$v") ;;
+            *) echo "::error file=server.json::.packages[1].identifier is $got, the tag says v$v"; exit 1 ;;
+          esac
+
   goreleaser:
+    needs: check-version
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
@@ -68,3 +100,10 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
       - run: npm publish --loglevel verbose
+
+  mcp-registry:
+    needs: npm-publish
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/mcp-registry.yml
