@@ -23,11 +23,9 @@ for arg in "$pkg" "$version"; do
 done
 timeout="${WAIT_TIMEOUT:-900}"
 interval="${WAIT_INTERVAL:-15}"
-# Counted from the clock, so slow answers from npm use up the wait too.
-start=$SECONDS
+waited=0
 
 while :; do
-  waited=$((SECONDS - start))
   # The same URL and Accept header as the registry's validator. The package
   # document that `npm view` reads is cached apart from it, so its answer
   # proves nothing about this one.
@@ -43,4 +41,5 @@ while :; do
   fi
   echo "npm does not serve $pkg@$version yet (waited ${waited}s of ${timeout}s)"
   sleep "$interval"
+  waited=$((waited + interval))
 done

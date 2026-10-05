@@ -18,6 +18,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Wait-for-npm script
+        run: .github/scripts/wait-for-npm_test.sh
+
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
