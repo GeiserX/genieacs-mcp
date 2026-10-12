@@ -443,3 +443,20 @@ func TestBuildHTTPHandler(t *testing.T) {
 		}
 	})
 }
+
+// An MCP client that leaves MCP_AUTH_TOKEN blank may still pass the literal "${MCP_AUTH_TOKEN}".
+// It must not become a guessable bearer token, and a placeholder listen address must fall back
+// to loopback.
+func TestLoadHTTPEnv_PlaceholderValuesAreUnset(t *testing.T) {
+	for _, k := range []string{"MCP_LISTEN_ADDR", "MCP_AUTH_TOKEN", "MCP_ALLOWED_HOSTS", "MCP_ALLOWED_ORIGINS"} {
+		t.Setenv(k, "${"+k+"}")
+	}
+
+	env := loadHTTPEnv()
+	if env.addr != "127.0.0.1:8080" {
+		t.Errorf("addr = %q, want the loopback default", env.addr)
+	}
+	if env.authToken != "" || env.allowedHosts != "" || env.allowedOrigin != "" {
+		t.Errorf("placeholder leaked into the HTTP config: %+v", env)
+	}
+}

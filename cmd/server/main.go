@@ -143,15 +143,15 @@ type httpEnv struct {
 // loadHTTPEnv reads the HTTP-transport settings from the environment, applying
 // the loopback default for the listen address.
 func loadHTTPEnv() httpEnv {
-	addr := os.Getenv("MCP_LISTEN_ADDR")
+	addr := config.Getenv("MCP_LISTEN_ADDR")
 	if addr == "" {
 		addr = "127.0.0.1:8080"
 	}
 	return httpEnv{
 		addr:          addr,
-		authToken:     os.Getenv("MCP_AUTH_TOKEN"),
-		allowedHosts:  os.Getenv("MCP_ALLOWED_HOSTS"),
-		allowedOrigin: os.Getenv("MCP_ALLOWED_ORIGINS"),
+		authToken:     config.Getenv("MCP_AUTH_TOKEN"),
+		allowedHosts:  config.Getenv("MCP_ALLOWED_HOSTS"),
+		allowedOrigin: config.Getenv("MCP_ALLOWED_ORIGINS"),
 	}
 }
 
@@ -260,7 +260,7 @@ func serveHTTP(ctx context.Context, srv *http.Server) error {
 // core of main(): all configuration comes from the environment, but the
 // blocking serve loops honour ctx so callers (and tests) can stop them.
 func run(ctx context.Context, s *server.MCPServer, in io.Reader, out io.Writer) error {
-	if strings.ToLower(os.Getenv("TRANSPORT")) == "stdio" {
+	if strings.ToLower(config.Getenv("TRANSPORT")) == "stdio" {
 		return runStdio(ctx, s, in, out)
 	}
 

@@ -17,3 +17,4 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: drumsergio/genieacs-mcp
+          short-description: "MCP server for GenieACS: query and manage TR-069 devices from an AI agent"

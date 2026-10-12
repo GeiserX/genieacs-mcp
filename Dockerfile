@@ -15,7 +15,16 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o /out/genieacs-mcp ./cmd/server
+# The release passes these from the tag (goreleaser build_flag_templates), so the
+# image logs and reports the version it was built from instead of "dev".
+ARG VERSION=dev
+ARG COMMIT=none
+ARG DATE=unknown
+RUN CGO_ENABLED=0 go build -ldflags "-s -w \
+      -X github.com/geiserx/genieacs-mcp/version.Version=${VERSION} \
+      -X github.com/geiserx/genieacs-mcp/version.Commit=${COMMIT} \
+      -X github.com/geiserx/genieacs-mcp/version.Date=${DATE}" \
+    -o /out/genieacs-mcp ./cmd/server
 
 # ───────────────────────────────────────────────
 # Stage 2 – tiny runtime image
