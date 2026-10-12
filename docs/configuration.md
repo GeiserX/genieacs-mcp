@@ -26,6 +26,10 @@ same for every client, so approval prompts belong in the client.
 
 Put them in a `.env` file (from `.env.example`) or set them in the environment. 
 
+A value that is nothing but an unexpanded placeholder, such as `${ACS_PASS}`, counts as unset. Some MCP clients
+write that placeholder when an optional field is left blank; the server ignores it rather than send it to GenieACS
+as a password or accept it as the HTTP auth token.
+
 ## Client configuration
 
 Over stdio, which the npm package always uses, a client that reads an `mcpServers` block starts the

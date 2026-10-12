@@ -119,3 +119,39 @@ func TestGetEnv_EmptyString(t *testing.T) {
 		t.Errorf("expected default_value for empty env, got %s", val)
 	}
 }
+
+func TestGetenv_UnexpandedPlaceholderReadsAsUnset(t *testing.T) {
+	cases := map[string]string{
+		"${ACS_PASS}":       "",
+		"${MCP_AUTH_TOKEN}": "",
+		" ${OTHER_NAME} ":   "",
+		"s3cret":            "s3cret",
+		"pw${ACS_PASS}":     "pw${ACS_PASS}",
+		"${not a name}":     "${not a name}",
+		"$ACS_PASS":         "$ACS_PASS",
+		"":                  "",
+	}
+	for in, want := range cases {
+		t.Setenv("GENIEACS_MCP_TEST_VAR", in)
+		if got := Getenv("GENIEACS_MCP_TEST_VAR"); got != want {
+			t.Errorf("Getenv with %q = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestLoadACSConfig_PlaceholderValuesAreUnset(t *testing.T) {
+	for _, k := range []string{"ACS_URL", "ACS_USER", "ACS_PASS", "DEVICE_LIMIT"} {
+		t.Setenv(k, "${"+k+"}")
+	}
+
+	cfg := LoadACSConfig()
+	if cfg.BaseURL != "http://localhost:7557" {
+		t.Errorf("BaseURL = %q, want the default", cfg.BaseURL)
+	}
+	if cfg.User != "" || cfg.Pass != "" {
+		t.Errorf("placeholder leaked into config: %+v", cfg)
+	}
+	if cfg.DeviceLimit != 500 {
+		t.Errorf("DeviceLimit = %d, want the default 500", cfg.DeviceLimit)
+	}
+}
