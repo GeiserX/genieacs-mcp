@@ -9,6 +9,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// NewTagDevice returns the tag_device tool, which adds a tag to a device or
+// removes one from it.
 func NewTagDevice(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 	tool := mcp.NewTool("tag_device",
 		mcp.WithDescription(

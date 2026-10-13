@@ -9,6 +9,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// NewGetParameter returns the get_parameter tool, which reads parameter values
+// GenieACS has cached for a device, without contacting the CPE.
 func NewGetParameter(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 	tool := mcp.NewTool("get_parameter",
 		mcp.WithDescription(

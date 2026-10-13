@@ -9,6 +9,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// NewManageProvision returns the manage_provision tool, which uploads, replaces
+// or deletes a GenieACS provision script by name.
 func NewManageProvision(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 	tool := mcp.NewTool("manage_provision",
 		mcp.WithDescription(

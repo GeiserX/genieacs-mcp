@@ -1,4 +1,8 @@
 // internal/tools/reboot.go
+
+// Package tools defines the MCP tools that act on GenieACS. Each New function
+// returns a tool definition and the handler that calls the matching client
+// method; the server registers both.
 package tools // ← same package for every tool file
 
 import (

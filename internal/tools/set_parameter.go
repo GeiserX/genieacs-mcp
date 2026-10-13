@@ -10,6 +10,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// NewSetParameter returns the set_parameter tool, which queues a
+// setParameterValues task on a device and asks GenieACS to run it at once.
 func NewSetParameter(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 	tool := mcp.NewTool("set_parameter",
 		mcp.WithDescription(

@@ -1,3 +1,6 @@
+// Command server runs the GenieACS MCP server. It serves the MCP protocol over
+// streamable HTTP on 127.0.0.1:8080 by default, or over stdin and stdout when
+// TRANSPORT=stdio, and reads its GenieACS settings from the environment.
 package main
 
 import (

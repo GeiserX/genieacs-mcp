@@ -22,14 +22,6 @@ func newTestACS(t *testing.T, handler http.HandlerFunc) (*client.ACSClient, func
 	return acs, srv.Close
 }
 
-// newTestACSWithAuth is like newTestACS but uses basic-auth.
-func newTestACSWithAuth(t *testing.T, handler http.HandlerFunc) (*client.ACSClient, func()) {
-	t.Helper()
-	srv := httptest.NewServer(handler)
-	acs := client.NewACS(srv.URL, "admin", "secret")
-	return acs, srv.Close
-}
-
 // callTool is a shorthand that builds a CallToolRequest and invokes a handler.
 func callTool(t *testing.T, handler func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error), args map[string]any) *mcp.CallToolResult {
 	t.Helper()

@@ -1,3 +1,6 @@
+// Package client is a small HTTP client for the GenieACS northbound interface (NBI):
+// it reads devices, files, tasks, faults, presets and provisions, and queues TR-069
+// tasks such as reboots, firmware downloads and parameter changes.
 package client
 
 import (
@@ -10,6 +13,9 @@ import (
 	"time"
 )
 
+// ACSClient holds the NBI base URL, optional basic-auth credentials and an HTTP
+// client with a 30-second timeout. Every method returns the raw response body;
+// an HTTP status of 400 or above is returned as an error carrying that body.
 type ACSClient struct {
 	base string
 	hc   *http.Client
@@ -17,6 +23,9 @@ type ACSClient struct {
 	pass string
 }
 
+// NewACS returns a client for the GenieACS NBI at base, such as
+// "http://localhost:7557". It sends basic auth only when user is not empty,
+// and panics if base cannot be parsed as a URL.
 func NewACS(base, user, pass string) *ACSClient {
 	if _, err := url.Parse(base); err != nil {
 		panic(fmt.Sprintf("invalid ACS base URL %q: %v", base, err))
@@ -58,7 +67,8 @@ func (c *ACSClient) do(req *http.Request) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-// Example high-level method – get device by ID
+// GetDevice returns the device document whose _id equals id, as a JSON array
+// that is empty when no device matches.
 func (c *ACSClient) GetDevice(id string) ([]byte, error) {
 	q := url.Values{}
 	q.Add("query", jsonQueryVal("_id", id))
