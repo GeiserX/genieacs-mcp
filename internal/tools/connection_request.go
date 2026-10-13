@@ -9,6 +9,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// NewConnectionRequest returns the connection_request tool, which asks GenieACS to
+// wake a CPE now without queuing a task.
 func NewConnectionRequest(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 	tool := mcp.NewTool("connection_request",
 		mcp.WithDescription(

@@ -9,6 +9,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// NewRetryTask returns the retry_task tool, which clears the fault on a task and
+// queues it again.
 func NewRetryTask(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 	tool := mcp.NewTool("retry_task",
 		mcp.WithDescription(

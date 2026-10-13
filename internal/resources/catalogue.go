@@ -1,3 +1,6 @@
+// Package resources registers the read-only MCP resources: the device list and
+// single devices, files, tasks, faults, presets and provisions, each read from
+// GenieACS through the client package.
 package resources
 
 import (

@@ -11,6 +11,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// NewSearchDevices returns the search_devices tool, which finds devices with a
+// MongoDB-style query and returns at most limit of them (50 by default).
 func NewSearchDevices(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 	tool := mcp.NewTool("search_devices",
 		mcp.WithDescription(

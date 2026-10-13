@@ -9,6 +9,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// NewManagePreset returns the manage_preset tool, which creates, replaces or
+// deletes a GenieACS preset by name.
 func NewManagePreset(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 	tool := mcp.NewTool("manage_preset",
 		mcp.WithDescription(

@@ -9,6 +9,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// NewDeleteTask returns the delete_task tool, which removes a pending task from
+// the GenieACS queue by its task ID.
 func NewDeleteTask(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 	tool := mcp.NewTool("delete_task",
 		mcp.WithDescription(

@@ -1,3 +1,5 @@
+// Package config reads the GenieACS connection settings from the environment,
+// after loading a .env file from the working directory when one exists.
 package config
 
 import (
@@ -15,6 +17,9 @@ func init() {
 	_ = godotenv.Load()
 }
 
+// ACSConfig holds what the server needs to reach GenieACS: the NBI base URL,
+// the basic-auth user and password, and the most devices the device list
+// resource returns.
 type ACSConfig struct {
 	BaseURL     string
 	User        string
@@ -22,6 +27,9 @@ type ACSConfig struct {
 	DeviceLimit int
 }
 
+// LoadACSConfig builds an ACSConfig from ACS_URL (default "http://localhost:7557"),
+// ACS_USER, ACS_PASS and DEVICE_LIMIT (default 500; values that are not a positive
+// integer are ignored). It logs a warning when neither credential is set.
 func LoadACSConfig() ACSConfig {
 	limit := 500
 	if v := Getenv("DEVICE_LIMIT"); v != "" {
