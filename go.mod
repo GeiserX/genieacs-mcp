@@ -2,6 +2,10 @@ module github.com/geiserx/genieacs-mcp
 
 go 1.25.5
 
+// go1.27.3 rejects certificates from the eight compromised eMudhra (emSign)
+// intermediates. setup-go builds CI and the release binaries with this version.
+toolchain go1.27.3
+
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/mark3labs/mcp-go v0.58.0
