@@ -30,6 +30,9 @@ RUN CGO_ENABLED=0 go build -ldflags "-s -w \
 # Stage 2 – tiny runtime image
 # ───────────────────────────────────────────────
 FROM alpine:3.24
+# The base image can lag the CA bundle; take the current one, which drops
+# the compromised eMudhra (emSign) intermediates.
+RUN apk upgrade --no-cache ca-certificates-bundle
 LABEL io.modelcontextprotocol.server.name="io.github.GeiserX/genieacs-mcp"
 
 COPY --from=builder /out/genieacs-mcp /usr/local/bin/genieacs-mcp
