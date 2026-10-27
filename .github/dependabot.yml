@@ -47,10 +47,9 @@ updates:
         applies-to: security-updates
         patterns:
           - '*'
-    ignore:
-      - dependency-name: '*'
-        update-types:
-          - version-update:semver-major
+    # No semver-major ignore here: it is what kept mark3labs/mcp-go on v0.58.0
+    # while v1.0.0 to v1.4.0 shipped protocol 2026-07-28. Majors come as their
+    # own pull requests and get reviewed by hand.
   - package-ecosystem: docker
     directory: /
     schedule:

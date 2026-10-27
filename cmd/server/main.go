@@ -189,9 +189,15 @@ func bearerAuth(next http.Handler, token string) http.Handler {
 	})
 }
 
+// serverOptions are the settings newMCPServer takes from the environment.
+type serverOptions struct {
+	deviceLimit int
+}
+
 // newMCPServer builds the MCP server with all GenieACS resources and tools
 // registered against acs.
-func newMCPServer(acs *client.ACSClient, deviceLimit int) *server.MCPServer {
+func newMCPServer(acs *client.ACSClient, opts serverOptions) (*server.MCPServer, error) {
+	deviceLimit := opts.deviceLimit
 	s := server.NewMCPServer(
 		"GenieACS MCP Bridge",
 		version.Version,
@@ -226,7 +232,14 @@ func newMCPServer(acs *client.ACSClient, deviceLimit int) *server.MCPServer {
 	register(tools.NewDeleteTask)
 	register(tools.NewRetryTask)
 
-	return s
+	return s, nil
+}
+
+// newStreamableHandler serves s over Streamable HTTP. It is stateless: the
+// server keeps nothing per client, so no session ids are minted or stored,
+// and 2026-07-28 requests and legacy initialize clients are served alike.
+func newStreamableHandler(s *server.MCPServer) http.Handler {
+	return server.NewStreamableHTTPServer(s, server.WithStateLess(true))
 }
 
 // runStdio serves the MCP server over the stdio transport until ctx is
@@ -268,7 +281,7 @@ func run(ctx context.Context, s *server.MCPServer, in io.Reader, out io.Writer) 
 	}
 
 	env := loadHTTPEnv()
-	addr, srv, err := newHTTPServer(server.NewStreamableHTTPServer(s), env)
+	addr, srv, err := newHTTPServer(newStreamableHandler(s), env)
 	if err != nil {
 		return err
 	}
@@ -286,7 +299,10 @@ func main() {
 	// Load config & initialise GenieACS client
 	cfg := config.LoadACSConfig()
 	acs := client.NewACS(cfg.BaseURL, cfg.User, cfg.Pass)
-	s := newMCPServer(acs, cfg.DeviceLimit)
+	s, err := newMCPServer(acs, serverOptions{deviceLimit: cfg.DeviceLimit})
+	if err != nil {
+		log.Fatalf("configuration error: %v", err)
+	}
 
 	// Stop cleanly on SIGINT/SIGTERM so containers shut down gracefully.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

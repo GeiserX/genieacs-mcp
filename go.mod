@@ -8,7 +8,7 @@ toolchain go1.27.3
 
 require (
 	github.com/joho/godotenv v1.5.1
-	github.com/mark3labs/mcp-go v0.58.0
+	github.com/mark3labs/mcp-go v1.4.0
 )
 
 require (

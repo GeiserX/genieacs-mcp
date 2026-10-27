@@ -145,7 +145,7 @@ func TestNewMCPServer(t *testing.T) {
 	// Registering all resources and tools must not panic, and the server must
 	// be usable as an HTTP handler backend.
 	acs := client.NewACS("http://127.0.0.1:7557", "", "")
-	s := newMCPServer(acs, 500)
+	s := mustServer(t, acs)
 	if s == nil {
 		t.Fatal("newMCPServer returned nil")
 	}
@@ -158,7 +158,7 @@ func TestNewMCPServer(t *testing.T) {
 
 func TestRunStdio_ReturnsOnEOF(t *testing.T) {
 	acs := client.NewACS("http://127.0.0.1:7557", "", "")
-	s := newMCPServer(acs, 500)
+	s := mustServer(t, acs)
 	// An empty reader is immediately at EOF, so Listen returns cleanly.
 	done := make(chan error, 1)
 	go func() { done <- runStdio(context.Background(), s, strings.NewReader(""), io.Discard) }()
@@ -175,7 +175,7 @@ func TestRunStdio_ReturnsOnEOF(t *testing.T) {
 func TestRun_StdioTransport(t *testing.T) {
 	t.Setenv("TRANSPORT", "stdio")
 	acs := client.NewACS("http://127.0.0.1:7557", "", "")
-	s := newMCPServer(acs, 500)
+	s := mustServer(t, acs)
 	done := make(chan error, 1)
 	go func() { done <- run(context.Background(), s, strings.NewReader(""), io.Discard) }()
 	select {
@@ -193,7 +193,7 @@ func TestRun_HTTPTransport_ShutsDownOnContextCancel(t *testing.T) {
 	t.Setenv("MCP_LISTEN_ADDR", "127.0.0.1:0") // ephemeral port, avoids clashes
 	t.Setenv("MCP_AUTH_TOKEN", "")
 	acs := client.NewACS("http://127.0.0.1:7557", "", "")
-	s := newMCPServer(acs, 500)
+	s := mustServer(t, acs)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -223,7 +223,7 @@ func TestRun_HTTPTransport_AuthRequiredError(t *testing.T) {
 			t.Setenv("MCP_LISTEN_ADDR", addr)
 			t.Setenv("MCP_AUTH_TOKEN", "")
 			acs := client.NewACS("http://127.0.0.1:7557", "", "")
-			s := newMCPServer(acs, 500)
+			s := mustServer(t, acs)
 			err := run(context.Background(), s, nil, nil)
 			if !errors.Is(err, errAuthTokenRequired) {
 				t.Fatalf("run(%q) err = %v, want errAuthTokenRequired", addr, err)
@@ -459,4 +459,13 @@ func TestLoadHTTPEnv_PlaceholderValuesAreUnset(t *testing.T) {
 	if env.authToken != "" || env.allowedHosts != "" || env.allowedOrigin != "" {
 		t.Errorf("placeholder leaked into the HTTP config: %+v", env)
 	}
+}
+
+func mustServer(t *testing.T, acs *client.ACSClient) *server.MCPServer {
+	t.Helper()
+	s, err := newMCPServer(acs, serverOptions{deviceLimit: 500})
+	if err != nil {
+		t.Fatalf("newMCPServer: %v", err)
+	}
+	return s
 }
