@@ -15,6 +15,9 @@ import (
 const (
 	defaultSearchLimit = 50
 	maxSearchLimit     = 200
+	// maxRegexLength caps each $regex pattern, so a call cannot hand the
+	// ACS's MongoDB a huge or pathological pattern to scan every device with.
+	maxRegexLength = 256
 )
 
 // forbiddenOperators run code or whole-collection expressions on the ACS's
@@ -40,7 +43,7 @@ func NewSearchDevices(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) 
 				"{\"InternetGatewayDevice.DeviceInfo.Manufacturer\":\"Huawei\"} (GenieACS adds ._value to parameter paths); "+
 				"{\"_lastInform\":{\"$lt\":\"2026-01-01T00:00:00Z\"}} for devices silent since that date; "+
 				"{\"_id\":{\"$regex\":\"^202BC1-\"}}. Query operators such as $eq, $ne, $gt, $lt, $in, $nin, $exists, $regex, "+
-				"$and and $or work; $where, $function, $accumulator and $expr are refused. "+
+				"$and and $or work; $where, $function, $accumulator and $expr are refused, and a $regex pattern may be at most 256 characters. "+
 				"By default each device comes back as a summary (id, last inform, tags, manufacturer, product class, serial); "+
 				"ask for other fields with projection. Results come in pages of limit (default 50, at most 200); page with skip.",
 		),
@@ -81,6 +84,9 @@ func NewSearchDevices(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) 
 		}
 		if op := forbiddenOperator(filter); op != "" {
 			return mcp.NewToolResultError(fmt.Sprintf("query uses %s, which runs code on the ACS database; use ordinary query operators", op)), nil
+		}
+		if longRegex(filter) {
+			return mcp.NewToolResultError(fmt.Sprintf("a $regex pattern in query is longer than %d characters; use a shorter pattern", maxRegexLength)), nil
 		}
 
 		opts := client.SearchOptions{
@@ -148,4 +154,26 @@ func forbiddenOperator(v any) string {
 		}
 	}
 	return ""
+}
+
+// longRegex reports whether any $regex pattern in v is longer than maxRegexLength.
+func longRegex(v any) bool {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, child := range x {
+			if p, ok := child.(string); ok && k == "$regex" && len(p) > maxRegexLength {
+				return true
+			}
+			if longRegex(child) {
+				return true
+			}
+		}
+	case []any:
+		for _, child := range x {
+			if longRegex(child) {
+				return true
+			}
+		}
+	}
+	return false
 }

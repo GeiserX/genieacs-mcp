@@ -1362,6 +1362,36 @@ func TestSearchDevices_refuses_code_running_operators(t *testing.T) {
 	}
 }
 
+func TestSearchDevices_caps_regex_length(t *testing.T) {
+	calls := 0
+	acs, cleanup := newTestACS(t, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.Write([]byte(`[]`))
+	})
+	defer cleanup()
+	_, handler := NewSearchDevices(acs)
+
+	long := strings.Repeat("a", maxRegexLength+1)
+	for _, q := range []string{
+		`{"_id":{"$regex":"` + long + `"}}`,
+		`{"$or":[{"a":1},{"_id":{"$regex":"` + long + `"}}]}`,
+	} {
+		result := callTool(t, handler, map[string]any{"query": q})
+		if !result.IsError || !strings.Contains(resultText(t, result), "$regex") {
+			t.Errorf("a %d-character $regex was not refused", len(long))
+		}
+	}
+	if calls != 0 {
+		t.Errorf("the NBI was called %d times for refused queries", calls)
+	}
+
+	ok := strings.Repeat("a", maxRegexLength)
+	result := callTool(t, handler, map[string]any{"query": `{"_id":{"$regex":"` + ok + `"}}`})
+	if result.IsError {
+		t.Errorf("a %d-character $regex was refused: %s", len(ok), resultText(t, result))
+	}
+}
+
 func TestSearchDevices_pages_and_projects(t *testing.T) {
 	var got map[string]string
 	acs, cleanup := newTestACS(t, func(w http.ResponseWriter, r *http.Request) {

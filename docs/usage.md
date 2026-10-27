@@ -40,7 +40,7 @@ running them twice is the same as once, so your client can ask before the ones t
 
 | Tool | Arguments | What it does | Reads or acts |
 |---|---|---|---|
-| `search_devices` | `query` (JSON string, MongoDB syntax), `limit` (1 to 200, default 50), `skip`, `projection` (default a summary; `all` for full documents), `sort` (JSON, e.g. `{"_lastInform":-1}`) | Finds devices by tag, manufacturer, model, firmware, last inform or any parameter. Query operators such as `$eq`, `$ne`, `$gt`, `$lt`, `$in`, `$nin`, `$exists`, `$regex`, `$and` and `$or` work; `$where`, `$function`, `$accumulator` and `$expr` are refused because they run code on the ACS database. Returns `count`, `more` (another page exists) and the devices. | reads |
+| `search_devices` | `query` (JSON string, MongoDB syntax), `limit` (1 to 200, default 50), `skip`, `projection` (default a summary; `all` for full documents), `sort` (JSON, e.g. `{"_lastInform":-1}`) | Finds devices by tag, manufacturer, model, firmware, last inform or any parameter. Query operators such as `$eq`, `$ne`, `$gt`, `$lt`, `$in`, `$nin`, `$exists`, `$regex`, `$and` and `$or` work; `$where`, `$function`, `$accumulator` and `$expr` are refused because they run code on the ACS database, and a `$regex` pattern may be at most 256 characters. Returns `count`, `more` (another page exists) and the devices. | reads |
 | `get_parameter` | `device_id`, `parameter_path` (one path or a comma-separated list) | Returns the last values the ACS has for those parameters, without contacting the device, as `parameters` (path to `value`, `type`, `timestamp`) plus the paths it has no value for in `missing`. Stale if the device has not informed recently. | reads |
 | `refresh_parameter` | `device_id`, `parameter` | Asks the device to report one parameter's current value; read it afterwards from `genieacs://device/{id}`. | acts |
 | `set_parameter` | `device_id`, `parameter_values` (JSON array of `[path, value]` or `[path, value, xsdType]` tuples; example below the table) | Writes parameter values on the device; the type is inferred when omitted. | acts |
@@ -65,7 +65,8 @@ A `parameter_values` example for `set_parameter`, renaming the WiFi network:
 ]
 ```
 
-Every tool answers with structured content as well as text, and declares its output schema. The tools that
+The two readers (`search_devices`, `get_parameter`) and the four task tools below answer with structured
+content as well as text, and declare their output schema; the other six tools answer with text. The tools that
 queue a task (`refresh_parameter`, `set_parameter`, `reboot_device`, `download_firmware`) return `status`:
 `done` when the device ran the task during the call (the NBI answered 200), `queued` when it was not
 reachable in time and the task waits for its next inform (202). A queued task is listed under

@@ -59,7 +59,7 @@ which the server also accepts:
 
 ```text
 -> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}
-<- {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"resources":{},"tools":{"listChanged":true}},"serverInfo":{"name":"GenieACS MCP Bridge","title":"GenieACS",...}}}
+<- {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"resources":{},"tools":{}},"serverInfo":{"name":"GenieACS MCP Bridge","title":"GenieACS",...}}}
 -> {"jsonrpc":"2.0","method":"notifications/initialized"}
 -> {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"genieacs://devices/list"}}
 <- {"jsonrpc":"2.0","id":2,"result":{"contents":[{"uri":"genieacs://devices/list","mimeType":"application/json","text":"[{\"_id\":\"202BC1-BM632w-000000\"}]"}]}}
