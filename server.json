@@ -1,10 +1,22 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.GeiserX/genieacs-mcp",
+  "title": "GenieACS",
   "description": "MCP server bridging GenieACS TR-069 ACS instances to LLMs for CPE device management",
+  "websiteUrl": "https://geiserx.github.io/genieacs-mcp/",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/GeiserX/genieacs-mcp/main/docs/images/icon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": [
+        "any"
+      ]
+    }
+  ],
   "repository": {
     "url": "https://github.com/GeiserX/genieacs-mcp",
-    "source": "github"
+    "source": "github",
+    "id": "989073503"
   },
   "version": "0.3.7",
   "packages": [
@@ -18,10 +30,11 @@
       "environmentVariables": [
         {
           "name": "ACS_URL",
-          "description": "GenieACS NBI API URL (e.g. http://genieacs:7557)",
-          "isRequired": true,
+          "description": "GenieACS NBI URL, without a trailing slash",
+          "isRequired": false,
           "format": "string",
-          "isSecret": false
+          "isSecret": false,
+          "default": "http://localhost:7557"
         },
         {
           "name": "ACS_USER",
@@ -41,7 +54,39 @@
           "name": "DEVICE_LIMIT",
           "description": "Max devices returned by genieacs://devices/list (default 500)",
           "isRequired": false,
+          "format": "number",
+          "isSecret": false,
+          "default": "500"
+        },
+        {
+          "name": "GENIEACS_READ_ONLY",
+          "description": "Set to true to serve only the tools that never change a device or the ACS",
+          "isRequired": false,
+          "format": "boolean",
+          "default": "false",
+          "isSecret": false
+        },
+        {
+          "name": "GENIEACS_TOOLS",
+          "description": "Comma-separated tool names to serve; every other tool is left out",
+          "isRequired": false,
           "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "ACS_TIMEOUT",
+          "description": "Seconds to wait for one GenieACS NBI request (default 30)",
+          "isRequired": false,
+          "format": "number",
+          "default": "30",
+          "isSecret": false
+        },
+        {
+          "name": "ACS_MAX_RESPONSE_BYTES",
+          "description": "Largest GenieACS NBI response the server reads, in bytes (default 4194304)",
+          "isRequired": false,
+          "format": "number",
+          "default": "4194304",
           "isSecret": false
         }
       ]
@@ -55,10 +100,11 @@
       "environmentVariables": [
         {
           "name": "ACS_URL",
-          "description": "GenieACS NBI API URL (e.g. http://genieacs:7557)",
-          "isRequired": true,
+          "description": "GenieACS NBI URL, without a trailing slash",
+          "isRequired": false,
           "format": "string",
-          "isSecret": false
+          "isSecret": false,
+          "default": "http://genieacs:7557"
         },
         {
           "name": "ACS_USER",
@@ -78,7 +124,39 @@
           "name": "DEVICE_LIMIT",
           "description": "Max devices returned by genieacs://devices/list (default 500)",
           "isRequired": false,
+          "format": "number",
+          "isSecret": false,
+          "default": "500"
+        },
+        {
+          "name": "GENIEACS_READ_ONLY",
+          "description": "Set to true to serve only the tools that never change a device or the ACS",
+          "isRequired": false,
+          "format": "boolean",
+          "default": "false",
+          "isSecret": false
+        },
+        {
+          "name": "GENIEACS_TOOLS",
+          "description": "Comma-separated tool names to serve; every other tool is left out",
+          "isRequired": false,
           "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "ACS_TIMEOUT",
+          "description": "Seconds to wait for one GenieACS NBI request (default 30)",
+          "isRequired": false,
+          "format": "number",
+          "default": "30",
+          "isSecret": false
+        },
+        {
+          "name": "ACS_MAX_RESPONSE_BYTES",
+          "description": "Largest GenieACS NBI response the server reads, in bytes (default 4194304)",
+          "isRequired": false,
+          "format": "number",
+          "default": "4194304",
           "isSecret": false
         }
       ]

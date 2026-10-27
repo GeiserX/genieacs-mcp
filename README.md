@@ -25,8 +25,9 @@
 - Reboot a device, push firmware to it, refresh or set a parameter, or wake it with a connection request, from a chat.
 - Tag devices, create or delete presets and provisions, and delete or retry tasks, so the assistant can fix what it finds.
 - Every tool description says what it does, its limits and an example, so clients pick the right one without a prompt from you.
-- Read versus act: `search_devices`, `get_parameter` and the seven resources only read; the other ten tools queue a task on a device or change the ACS.
-- No read-only mode: point it at an ACS you are willing to let an assistant act on, and keep your client's tool-approval prompts on.
+- Read versus act: `search_devices`, `get_parameter` and the seven resources only read; the other ten tools queue a task on a device or change the ACS, and each tool's hints say which, so your client can ask before the ones that act.
+- Read-only mode: `GENIEACS_READ_ONLY=true` serves only the two reading tools and the resources; `GENIEACS_TOOLS=search_devices,reboot_device` serves only the tools you name.
+- Speaks MCP 2026-07-28 and every earlier version back to 2024-11-05, so new and old clients both connect, over stdio or stateless HTTP.
 - Safe on a laptop: the HTTP transport listens on loopback only unless you set an address and a bearer token, and checks `Host` and `Origin` against DNS rebinding.
 - One static Go binary for Linux, macOS and Windows on amd64 and arm64, also as an npm package (`npx genieacs-mcp`) and a Docker image.
 
@@ -51,6 +52,29 @@ Then add the server to a client that reads an `mcpServers` block (Claude Desktop
     }
   }
 }
+```
+
+The same server in other clients:
+
+```sh
+# Claude Code
+claude mcp add --transport stdio --env ACS_URL=http://localhost:7557 genieacs -- npx -y genieacs-mcp
+
+# Docker, over stdio (any client that starts a command)
+docker run -i --rm -e ACS_URL=http://host.docker.internal:7557 drumsergio/genieacs-mcp:v0.3.7
+```
+
+```jsonc
+// VS Code, .vscode/mcp.json
+{ "servers": { "genieacs": { "type": "stdio", "command": "npx", "args": ["-y", "genieacs-mcp"], "env": { "ACS_URL": "http://localhost:7557" } } } }
+```
+
+```toml
+# Codex, ~/.codex/config.toml
+[mcp_servers.genieacs]
+command = "npx"
+args = ["-y", "genieacs-mcp"]
+env = { ACS_URL = "http://localhost:7557" }
 ```
 
 It worked when you ask "which devices does the ACS know about?" and the assistant answers with device ids such as `202BC1-BM632w-000000` (the demo stack) or your own. Docker, the HTTP transport and a local build are in [Getting started](https://geiserx.github.io/genieacs-mcp/getting-started/).
