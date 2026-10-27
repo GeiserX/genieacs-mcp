@@ -60,12 +60,12 @@ func NewDownloadFirmware(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFun
 
 		name, _ := req.GetArguments()["filename"].(string)
 
-		resp, err := acs.DownloadFirmware(deviceID, fileID, name)
+		resp, err := acs.DownloadFirmware(ctx, deviceID, fileID, name)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 		return mcp.NewToolResultText(
-			fmt.Sprintf("Download task queued/processed. Raw ACS response: %s", string(resp)),
+			fmt.Sprintf("Download task queued/processed. Raw ACS response: %s", string(resp.Body)),
 		), nil
 	}
 

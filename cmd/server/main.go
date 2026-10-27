@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -120,19 +121,32 @@ func dnsRebindGuard(next http.Handler, hosts, origins map[string]bool) http.Hand
 	})
 }
 
-// buildHTTPHandler wraps the MCP handler for the HTTP transport: an outer
-// DNS-rebinding guard (Host/Origin validation derived from addr plus the
-// MCP_ALLOWED_HOSTS / MCP_ALLOWED_ORIGINS allowlists) and, when authToken is
-// set, an inner bearer-auth check.
-func buildHTTPHandler(mcpHandler http.Handler, addr, authToken, extraHosts, extraOrigins string) http.Handler {
+// maxRequestBody caps one HTTP request body. The SDK reads the whole body
+// into memory, so without a cap one large POST could exhaust it.
+const maxRequestBody = 4 << 20
+
+// buildHTTPHandler wraps the MCP handler for the HTTP transport, outermost
+// first: a DNS-rebinding guard (Host/Origin validation derived from addr plus
+// the MCP_ALLOWED_HOSTS / MCP_ALLOWED_ORIGINS allowlists), the standard
+// library's cross-origin protection (which also rejects cross-site browser
+// requests that carry Sec-Fetch-Site but no Origin), the bearer-auth check
+// when authToken is set, and a request body cap.
+func buildHTTPHandler(mcpHandler http.Handler, addr, authToken, extraHosts, extraOrigins string) (http.Handler, error) {
 	allowedHosts := allowedHostSet(addr, splitList(extraHosts))
 	allowedOrigins := allowedOriginSet(allowedHosts, splitList(extraOrigins))
 
-	handler := mcpHandler
+	cop := http.NewCrossOriginProtection()
+	for origin := range allowedOrigins {
+		if err := cop.AddTrustedOrigin(origin); err != nil {
+			return nil, fmt.Errorf("MCP_ALLOWED_ORIGINS: %w", err)
+		}
+	}
+
+	handler := http.MaxBytesHandler(mcpHandler, maxRequestBody)
 	if authToken != "" {
 		handler = bearerAuth(handler, authToken)
 	}
-	return dnsRebindGuard(handler, allowedHosts, allowedOrigins)
+	return dnsRebindGuard(cop.Handler(handler), allowedHosts, allowedOrigins), nil
 }
 
 // httpEnv is the subset of environment configuration the HTTP transport needs.
@@ -169,19 +183,35 @@ func newHTTPServer(mcpHandler http.Handler, env httpEnv) (string, *http.Server, 
 
 	// Validate Host/Origin on every request to prevent DNS rebinding from a
 	// malicious web page reaching this listener (GHSA-cmwv-wf9p-p8wx).
-	handler := buildHTTPHandler(mcpHandler, env.addr, env.authToken, env.allowedHosts, env.allowedOrigin)
+	handler, err := buildHTTPHandler(mcpHandler, env.addr, env.authToken, env.allowedHosts, env.allowedOrigin)
+	if err != nil {
+		return "", nil, err
+	}
 
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", handler)
-	return env.addr, &http.Server{Addr: env.addr, Handler: mux}, nil
+	return env.addr, &http.Server{
+		Addr:    env.addr,
+		Handler: mux,
+		// Bound how long a client may hold a connection without sending a
+		// full request. No WriteTimeout: responses may stream.
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}, nil
 }
 
 var errAuthTokenRequired = errors.New("MCP_AUTH_TOKEN is required when MCP_LISTEN_ADDR is not loopback")
 
+// bearerAuth requires "Authorization: Bearer <token>". The scheme is matched
+// case-insensitively (RFC 9110), a token sent without it is refused, and the
+// token is compared in constant time.
 func bearerAuth(next http.Handler, token string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
+		scheme, got, ok := strings.Cut(r.Header.Get("Authorization"), " ")
+		if !ok || !strings.EqualFold(scheme, "Bearer") ||
+			subtle.ConstantTimeCompare([]byte(strings.TrimSpace(got)), []byte(token)) != 1 {
+			w.Header().Set("WWW-Authenticate", `Bearer realm="genieacs-mcp"`)
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -299,6 +329,8 @@ func main() {
 	// Load config & initialise GenieACS client
 	cfg := config.LoadACSConfig()
 	acs := client.NewACS(cfg.BaseURL, cfg.User, cfg.Pass)
+	acs.SetMaxResponseBytes(cfg.MaxResponseBytes)
+	acs.SetTimeout(cfg.Timeout)
 	s, err := newMCPServer(acs, serverOptions{deviceLimit: cfg.DeviceLimit})
 	if err != nil {
 		log.Fatalf("configuration error: %v", err)

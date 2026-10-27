@@ -57,11 +57,11 @@ func NewSearchDevices(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) 
 		limit := 50
 		if l, ok := req.GetArguments()["limit"].(string); ok && l != "" {
 			if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
-				limit = parsed
+				limit = min(parsed, 200)
 			}
 		}
 
-		resp, err := acs.SearchDevices(query, limit)
+		resp, err := acs.SearchDevices(ctx, query, client.SearchOptions{Limit: limit})
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

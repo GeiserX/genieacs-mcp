@@ -411,7 +411,7 @@ func TestBuildHTTPHandler(t *testing.T) {
 	}
 
 	t.Run("no auth: guard still enforced", func(t *testing.T) {
-		h := buildHTTPHandler(backend, "127.0.0.1:8080", "", "", "")
+		h, _ := buildHTTPHandler(backend, "127.0.0.1:8080", "", "", "")
 		if code := request(h, "127.0.0.1:8080", "", ""); code != http.StatusOK {
 			t.Errorf("loopback request got %d, want 200", code)
 		}
@@ -421,7 +421,7 @@ func TestBuildHTTPHandler(t *testing.T) {
 	})
 
 	t.Run("auth: guard runs and bearer required", func(t *testing.T) {
-		h := buildHTTPHandler(backend, "127.0.0.1:8080", "tok", "", "")
+		h, _ := buildHTTPHandler(backend, "127.0.0.1:8080", "tok", "", "")
 		// Trusted host but missing token -> 401.
 		if code := request(h, "127.0.0.1:8080", "", ""); code != http.StatusUnauthorized {
 			t.Errorf("missing token got %d, want 401", code)
@@ -437,7 +437,7 @@ func TestBuildHTTPHandler(t *testing.T) {
 	})
 
 	t.Run("extra allowlists honoured", func(t *testing.T) {
-		h := buildHTTPHandler(backend, "127.0.0.1:8080", "", "acs.example.com", "https://app.example.com")
+		h, _ := buildHTTPHandler(backend, "127.0.0.1:8080", "", "acs.example.com", "https://app.example.com")
 		if code := request(h, "acs.example.com", "https://app.example.com", ""); code != http.StatusOK {
 			t.Errorf("allowlisted host/origin got %d, want 200", code)
 		}
@@ -468,4 +468,82 @@ func mustServer(t *testing.T, acs *client.ACSClient) *server.MCPServer {
 		t.Fatalf("newMCPServer: %v", err)
 	}
 	return s
+}
+
+func TestBearerAuth_Scheme(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
+	h := bearerAuth(backend, "s3cret")
+	for header, want := range map[string]int{
+		"Bearer s3cret":  http.StatusOK,
+		"bearer s3cret":  http.StatusOK, // the scheme is case-insensitive
+		"BEARER  s3cret": http.StatusOK,
+		"s3cret":         http.StatusUnauthorized, // a bare token is not a bearer credential
+		"Basic s3cret":   http.StatusUnauthorized,
+		"Bearer":         http.StatusUnauthorized,
+		"Bearer s3cretX": http.StatusUnauthorized,
+	} {
+		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/mcp", nil)
+		req.Header.Set("Authorization", header)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != want {
+			t.Errorf("Authorization %q got %d, want %d", header, rec.Code, want)
+		}
+		if rec.Code == http.StatusUnauthorized && !strings.HasPrefix(rec.Header().Get("WWW-Authenticate"), "Bearer") {
+			t.Errorf("401 for %q carries no WWW-Authenticate: Bearer challenge", header)
+		}
+	}
+}
+
+func TestBuildHTTPHandler_RejectsCrossSiteWithoutOrigin(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
+	h, err := buildHTTPHandler(backend, "127.0.0.1:8080", "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/mcp", nil)
+	req.Host = "127.0.0.1:8080"
+	req.Header.Set("Sec-Fetch-Site", "cross-site")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("cross-site browser POST got %d, want 403", rec.Code)
+	}
+}
+
+func TestBuildHTTPHandler_RejectsMalformedAllowedOrigin(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {})
+	if _, err := buildHTTPHandler(backend, "127.0.0.1:8080", "", "", "app.example.com"); err == nil {
+		t.Error("an origin without a scheme was accepted into MCP_ALLOWED_ORIGINS")
+	}
+}
+
+func TestBuildHTTPHandler_CapsRequestBody(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := io.ReadAll(r.Body); err != nil {
+			http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	h, _ := buildHTTPHandler(backend, "127.0.0.1:8080", "", "", "")
+	for size, want := range map[int]int{maxRequestBody: http.StatusOK, maxRequestBody + 1: http.StatusRequestEntityTooLarge} {
+		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/mcp", strings.NewReader(strings.Repeat("x", size)))
+		req.Host = "127.0.0.1:8080"
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != want {
+			t.Errorf("%d-byte body got %d, want %d", size, rec.Code, want)
+		}
+	}
+}
+
+func TestNewHTTPServer_SetsTimeouts(t *testing.T) {
+	_, srv, err := newHTTPServer(http.NotFoundHandler(), httpEnv{addr: "127.0.0.1:8080"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if srv.ReadHeaderTimeout <= 0 || srv.ReadTimeout <= 0 || srv.IdleTimeout <= 0 {
+		t.Errorf("timeouts not set: header %v, read %v, idle %v", srv.ReadHeaderTimeout, srv.ReadTimeout, srv.IdleTimeout)
+	}
 }

@@ -63,7 +63,7 @@ func NewTagDevice(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 
 		switch action {
 		case "add":
-			resp, err := acs.AddTag(devID, tag)
+			resp, err := acs.AddTag(ctx, devID, tag)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -71,7 +71,7 @@ func NewTagDevice(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 				fmt.Sprintf("Tag \"%s\" added to device %s. Raw ACS response: %s", tag, devID, string(resp)),
 			), nil
 		case "remove":
-			resp, err := acs.RemoveTag(devID, tag)
+			resp, err := acs.RemoveTag(ctx, devID, tag)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}

@@ -62,7 +62,7 @@ func NewManageProvision(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc
 			if script == "" {
 				return mcp.NewToolResultError("script is required for action=\"put\""), nil
 			}
-			resp, err := acs.PutProvision(name, script)
+			resp, err := acs.PutProvision(ctx, name, script)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -70,7 +70,7 @@ func NewManageProvision(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc
 				fmt.Sprintf("Provision \"%s\" saved. Raw ACS response: %s", name, string(resp)),
 			), nil
 		case "delete":
-			resp, err := acs.DeleteProvision(name)
+			resp, err := acs.DeleteProvision(ctx, name)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}

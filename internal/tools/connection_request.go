@@ -42,7 +42,7 @@ func NewConnectionRequest(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFu
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		resp, err := acs.ConnectionRequest(devID)
+		resp, err := acs.ConnectionRequest(ctx, devID)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

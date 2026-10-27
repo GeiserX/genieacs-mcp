@@ -54,7 +54,7 @@ func NewGetParameter(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		resp, err := acs.GetDeviceParameters(devID, paramPath)
+		resp, err := acs.GetDeviceParameters(ctx, devID, paramPath)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

@@ -37,7 +37,7 @@ func RegisterFaults(s *server.MCPServer, acs *client.ACSClient) {
 			return nil, fmt.Errorf("missing device id")
 		}
 
-		body, err := acs.GetFaultsForDevice(id)
+		body, err := acs.GetFaultsForDevice(ctx, id)
 		if err != nil {
 			return nil, err
 		}

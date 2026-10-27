@@ -32,7 +32,7 @@ func RegisterDevice(s *server.MCPServer, acs *client.ACSClient) {
 			return nil, fmt.Errorf("missing device id")
 		}
 
-		body, err := acs.GetDevice(id)
+		body, err := acs.GetDevice(ctx, id)
 		if err != nil {
 			return nil, err
 		}

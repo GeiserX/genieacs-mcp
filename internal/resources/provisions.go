@@ -27,7 +27,7 @@ func RegisterProvisions(s *server.MCPServer, acs *client.ACSClient) {
 	)
 
 	s.AddResource(res, func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-		body, err := acs.ListProvisions()
+		body, err := acs.ListProvisions(ctx)
 		if err != nil {
 			return nil, err
 		}

@@ -30,7 +30,7 @@ func RegisterCatalogue(s *server.MCPServer, acs *client.ACSClient, limit int) {
 	)
 
 	s.AddResource(res, func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-		body, err := acs.ListDeviceSummaries(limit)
+		body, err := acs.ListDeviceSummaries(ctx, limit)
 		if err != nil {
 			return nil, err
 		}

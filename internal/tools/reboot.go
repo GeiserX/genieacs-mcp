@@ -46,13 +46,13 @@ func NewReboot(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		resp, err := acs.RebootDevice(devID)
+		resp, err := acs.RebootDevice(ctx, devID)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
 		return mcp.NewToolResultText(
-			fmt.Sprintf("Reboot task queued/processed. Raw ACS response: %s", string(resp)),
+			fmt.Sprintf("Reboot task queued/processed. Raw ACS response: %s", string(resp.Body)),
 		), nil
 	}
 

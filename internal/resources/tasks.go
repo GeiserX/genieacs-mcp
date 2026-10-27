@@ -31,7 +31,7 @@ func RegisterTasks(s *server.MCPServer, acs *client.ACSClient) {
 			return nil, fmt.Errorf("missing device id")
 		}
 
-		body, err := acs.GetTasksForDevice(id)
+		body, err := acs.GetTasksForDevice(ctx, id)
 		if err != nil {
 			return nil, err
 		}

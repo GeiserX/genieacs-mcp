@@ -40,7 +40,7 @@ func NewDeleteTask(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		resp, err := acs.DeleteTask(taskID)
+		resp, err := acs.DeleteTask(ctx, taskID)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

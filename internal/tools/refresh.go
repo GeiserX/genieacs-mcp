@@ -55,13 +55,13 @@ func NewRefreshParameter(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFun
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		resp, err := acs.RefreshParameter(deviceID, param)
+		resp, err := acs.RefreshParameter(ctx, deviceID, param)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
 		return mcp.NewToolResultText(
-			fmt.Sprintf("Refresh task queued/processed. Raw ACS response: %s", string(resp)),
+			fmt.Sprintf("Refresh task queued/processed. Raw ACS response: %s", string(resp.Body)),
 		), nil
 	}
 

@@ -38,7 +38,7 @@ func NewRetryTask(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		resp, err := acs.RetryTask(taskID)
+		resp, err := acs.RetryTask(ctx, taskID)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

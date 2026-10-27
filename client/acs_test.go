@@ -1,15 +1,19 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 )
 
 func TestNewACS(t *testing.T) {
 	acs := NewACS("http://localhost:7557", "admin", "pass")
-	if acs.base != "http://localhost:7557" {
+	if acs.base.String() != "http://localhost:7557" {
 		t.Errorf("expected base http://localhost:7557, got %s", acs.base)
 	}
 	if acs.user != "admin" {
@@ -78,7 +82,7 @@ func TestGetDevice(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.GetDevice("device-001")
+	body, err := acs.GetDevice(ctx(), "device-001")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -100,7 +104,7 @@ func TestGetDevice_WithAuth(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "admin", "secret")
-	body, err := acs.GetDevice("device-001")
+	body, err := acs.GetDevice(ctx(), "device-001")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -122,7 +126,7 @@ func TestGetDevice_NoAuth(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.GetDevice("test")
+	_, err := acs.GetDevice(ctx(), "test")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -136,7 +140,7 @@ func TestGetDevice_ServerError(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.GetDevice("device-001")
+	_, err := acs.GetDevice(ctx(), "device-001")
 	if err == nil {
 		t.Fatal("expected error for 500 status")
 	}
@@ -160,7 +164,7 @@ func TestGetFileByName(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.GetFileByName("firmware.bin")
+	body, err := acs.GetFileByName(ctx(), "firmware.bin")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -184,7 +188,7 @@ func TestGetTasksForDevice(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.GetTasksForDevice("dev-001")
+	body, err := acs.GetTasksForDevice(ctx(), "dev-001")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -203,7 +207,7 @@ func TestListDeviceSummaries(t *testing.T) {
 			t.Errorf("expected limit 100, got %s", limit)
 		}
 		proj := r.URL.Query().Get("projection")
-		if proj != "_id,summary.lastInform" {
+		if !strings.Contains(proj, "_lastInform") || strings.Contains(proj, "summary.") {
 			t.Errorf("unexpected projection: %s", proj)
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -212,7 +216,7 @@ func TestListDeviceSummaries(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.ListDeviceSummaries(100)
+	body, err := acs.ListDeviceSummaries(ctx(), 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -232,7 +236,7 @@ func TestListDeviceSummaries_NoLimit(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.ListDeviceSummaries(0)
+	_, err := acs.ListDeviceSummaries(ctx(), 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -255,11 +259,11 @@ func TestRebootDevice(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.RebootDevice("dev-001")
+	body, err := acs.RebootDevice(ctx(), "dev-001")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(body) == 0 {
+	if len(body.Body) == 0 {
 		t.Error("expected non-empty response body")
 	}
 }
@@ -285,11 +289,11 @@ func TestDownloadFirmware(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.DownloadFirmware("dev-001", "file-001", "firmware.bin")
+	body, err := acs.DownloadFirmware(ctx(), "dev-001", "file-001", "firmware.bin")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(body) == 0 {
+	if len(body.Body) == 0 {
 		t.Error("expected non-empty response body")
 	}
 }
@@ -306,7 +310,7 @@ func TestDownloadFirmware_NoFilename(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.DownloadFirmware("dev-001", "file-001", "")
+	_, err := acs.DownloadFirmware(ctx(), "dev-001", "file-001", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -331,11 +335,11 @@ func TestRefreshParameter(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.RefreshParameter("dev-001", "Device.DeviceInfo.SerialNumber")
+	body, err := acs.RefreshParameter(ctx(), "dev-001", "Device.DeviceInfo.SerialNumber")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(body) == 0 {
+	if len(body.Body) == 0 {
 		t.Error("expected non-empty response body")
 	}
 }
@@ -360,11 +364,11 @@ func TestSetParameterValues(t *testing.T) {
 
 	acs := NewACS(server.URL, "", "")
 	pv := json.RawMessage(`[["Device.WiFi.SSID","TestSSID","xsd:string"]]`)
-	body, err := acs.SetParameterValues("dev-001", pv)
+	body, err := acs.SetParameterValues(ctx(), "dev-001", pv)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(body) == 0 {
+	if len(body.Body) == 0 {
 		t.Error("expected non-empty response body")
 	}
 }
@@ -386,7 +390,7 @@ func TestGetDeviceParameters(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.GetDeviceParameters("dev-001", "Device.DeviceInfo.SoftwareVersion")
+	body, err := acs.GetDeviceParameters(ctx(), "dev-001", "Device.DeviceInfo.SoftwareVersion")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -405,7 +409,7 @@ func TestListPresets(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.ListPresets()
+	body, err := acs.ListPresets(ctx())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -430,7 +434,7 @@ func TestPutPreset(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.PutPreset("test-preset", []byte(`{"weight":0}`))
+	_, err := acs.PutPreset(ctx(), "test-preset", []byte(`{"weight":0}`))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -449,7 +453,7 @@ func TestDeletePreset(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.DeletePreset("test-preset")
+	_, err := acs.DeletePreset(ctx(), "test-preset")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -465,7 +469,7 @@ func TestListProvisions(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.ListProvisions()
+	body, err := acs.ListProvisions(ctx())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -490,7 +494,7 @@ func TestPutProvision(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.PutProvision("my-prov", "log('hello');")
+	_, err := acs.PutProvision(ctx(), "my-prov", "log('hello');")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -509,7 +513,7 @@ func TestDeleteProvision(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.DeleteProvision("my-prov")
+	_, err := acs.DeleteProvision(ctx(), "my-prov")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -529,7 +533,7 @@ func TestGetFaultsForDevice(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.GetFaultsForDevice("dev-001")
+	body, err := acs.GetFaultsForDevice(ctx(), "dev-001")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -556,7 +560,7 @@ func TestSearchDevices(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.SearchDevices(`{"_tags":"office"}`, 10)
+	body, err := acs.SearchDevices(ctx(), `{"_tags":"office"}`, SearchOptions{Limit: 10})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -578,7 +582,7 @@ func TestAddTag(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.AddTag("dev-001", "office")
+	_, err := acs.AddTag(ctx(), "dev-001", "office")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -597,7 +601,7 @@ func TestRemoveTag(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.RemoveTag("dev-001", "office")
+	_, err := acs.RemoveTag(ctx(), "dev-001", "office")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -619,7 +623,7 @@ func TestConnectionRequest(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.ConnectionRequest("dev-001")
+	_, err := acs.ConnectionRequest(ctx(), "dev-001")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -638,7 +642,7 @@ func TestDeleteTask(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.DeleteTask("task-001")
+	_, err := acs.DeleteTask(ctx(), "task-001")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -657,7 +661,7 @@ func TestRetryTask(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.RetryTask("task-001")
+	_, err := acs.RetryTask(ctx(), "task-001")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -671,7 +675,7 @@ func TestDeleteTask_DeviceInSession(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.DeleteTask("task-001")
+	_, err := acs.DeleteTask(ctx(), "task-001")
 	if err == nil {
 		t.Fatal("expected error for 503 status")
 	}
@@ -687,7 +691,7 @@ func TestGetDevice_NetworkError(t *testing.T) {
 	server.Close() // close immediately so connections are refused
 
 	acs := NewACS(serverURL, "", "")
-	_, err := acs.GetDevice("dev-001")
+	_, err := acs.GetDevice(ctx(), "dev-001")
 	if err == nil {
 		t.Fatal("expected network error when server is closed")
 	}
@@ -716,7 +720,7 @@ func TestGetDeviceParameters_EmptyProjection(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	body, err := acs.GetDeviceParameters("dev-001", "")
+	body, err := acs.GetDeviceParameters(ctx(), "dev-001", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -743,8 +747,144 @@ func TestSearchDevices_NoLimit(t *testing.T) {
 	defer server.Close()
 
 	acs := NewACS(server.URL, "", "")
-	_, err := acs.SearchDevices(`{"_id":"x"}`, 0)
+	_, err := acs.SearchDevices(ctx(), `{"_id":"x"}`, SearchOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func ctx() context.Context { return context.Background() }
+
+// GenieACS escapes every non-alphanumeric character of a device id, so real
+// ids carry "%XX" sequences. Each path segment must reach the NBI escaped
+// exactly once, or the NBI answers "No such device" (or stores a tag under a
+// mangled name).
+func TestPathSegmentsAreEscapedOnce(t *testing.T) {
+	ids := []string{"00259E-HG8245H%2D5-SN0001", "dev with space", "a/b", "plain-001"}
+	for _, id := range ids {
+		t.Run(id, func(t *testing.T) {
+			var gotPath, gotEscaped string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotPath, gotEscaped = r.URL.Path, r.URL.EscapedPath()
+				w.Write([]byte(`{}`))
+			}))
+			defer server.Close()
+			acs := NewACS(server.URL, "", "")
+
+			if _, err := acs.RebootDevice(ctx(), id); err != nil {
+				t.Fatal(err)
+			}
+			if want := "/devices/" + id + "/tasks"; gotPath != want {
+				t.Errorf("NBI decoded path %q, want %q", gotPath, want)
+			}
+			if want := "/devices/" + url.PathEscape(id) + "/tasks"; gotEscaped != want {
+				t.Errorf("NBI received %q, want %q", gotEscaped, want)
+			}
+
+			if _, err := acs.AddTag(ctx(), id, "floor 2"); err != nil {
+				t.Fatal(err)
+			}
+			if want := "/devices/" + id + "/tags/floor 2"; gotPath != want {
+				t.Errorf("tag path decoded to %q, want %q", gotPath, want)
+			}
+		})
+	}
+}
+
+func TestBaseURLPathPrefixIsKept(t *testing.T) {
+	var got string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.URL.Path
+		w.Write([]byte(`[]`))
+	}))
+	defer server.Close()
+
+	acs := NewACS(server.URL+"/nbi/", "", "")
+	if _, err := acs.DeleteTask(ctx(), "t1"); err != nil {
+		t.Fatal(err)
+	}
+	if got != "/nbi/tasks/t1" {
+		t.Errorf("path = %q, want /nbi/tasks/t1", got)
+	}
+}
+
+func TestGetFaultsForDevice_QuotesRegexMetacharacters(t *testing.T) {
+	var got string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.URL.Query().Get("query")
+		w.Write([]byte(`[]`))
+	}))
+	defer server.Close()
+
+	acs := NewACS(server.URL, "", "")
+	if _, err := acs.GetFaultsForDevice(ctx(), ".*"); err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"_id":{"$regex":"^\\.\\*:"}}`; got != want {
+		t.Errorf("faults query = %s, want %s", got, want)
+	}
+}
+
+func TestResponseSizeIsCapped(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(strings.Repeat("x", 11)))
+	}))
+	defer server.Close()
+
+	acs := NewACS(server.URL, "", "")
+	acs.SetMaxResponseBytes(10)
+	if _, err := acs.ListPresets(ctx()); !errors.Is(err, ErrResponseTooLarge) {
+		t.Errorf("11-byte body with a 10-byte cap: err = %v, want ErrResponseTooLarge", err)
+	}
+	acs.SetMaxResponseBytes(11)
+	if body, err := acs.ListPresets(ctx()); err != nil || len(body) != 11 {
+		t.Errorf("11-byte body with an 11-byte cap: len %d, err %v", len(body), err)
+	}
+}
+
+func TestErrorBodyIsTrimmed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(strings.Repeat("e", 10000)))
+	}))
+	defer server.Close()
+
+	_, err := NewACS(server.URL, "", "").ListPresets(ctx())
+	if err == nil || len(err.Error()) > maxErrorBody+32 {
+		t.Errorf("error is %d bytes long, want at most %d", len(err.Error()), maxErrorBody+32)
+	}
+}
+
+func TestTransportErrorNamesNoAddress(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	addr := strings.TrimPrefix(server.URL, "http://")
+	server.Close()
+
+	_, err := NewACS(server.URL, "", "").GetDevice(ctx(), "dev-001")
+	if err == nil {
+		t.Fatal("expected an error from a closed server")
+	}
+	if strings.Contains(err.Error(), addr) || strings.Contains(err.Error(), "127.0.0.1") {
+		t.Errorf("error %q leaks the NBI address", err)
+	}
+}
+
+func TestTaskResultReportsWhetherTheDeviceRanIt(t *testing.T) {
+	for _, tc := range []struct {
+		status int
+		done   bool
+	}{{http.StatusOK, true}, {http.StatusAccepted, false}} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(tc.status)
+			w.Write([]byte(`{"_id":"task-9"}`))
+		}))
+		res, err := NewACS(server.URL, "", "").RebootDevice(ctx(), "dev-001")
+		server.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Done() != tc.done || res.Status != tc.status {
+			t.Errorf("status %d: Done() = %v, want %v", tc.status, res.Done(), tc.done)
+		}
 	}
 }

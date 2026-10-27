@@ -63,12 +63,12 @@ func NewSetParameter(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 			return mcp.NewToolResultError(fmt.Sprintf("parameter_values is not valid JSON: %v", err)), nil
 		}
 
-		resp, err := acs.SetParameterValues(devID, pv)
+		resp, err := acs.SetParameterValues(ctx, devID, pv)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 		return mcp.NewToolResultText(
-			fmt.Sprintf("setParameterValues task queued. Raw ACS response: %s", string(resp)),
+			fmt.Sprintf("setParameterValues task queued. Raw ACS response: %s", string(resp.Body)),
 		), nil
 	}
 

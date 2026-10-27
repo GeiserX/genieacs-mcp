@@ -63,7 +63,7 @@ func NewManagePreset(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 			if body == "" {
 				return mcp.NewToolResultError("body is required for action=\"put\""), nil
 			}
-			resp, err := acs.PutPreset(name, []byte(body))
+			resp, err := acs.PutPreset(ctx, name, []byte(body))
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
@@ -71,7 +71,7 @@ func NewManagePreset(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 				fmt.Sprintf("Preset \"%s\" saved. Raw ACS response: %s", name, string(resp)),
 			), nil
 		case "delete":
-			resp, err := acs.DeletePreset(name)
+			resp, err := acs.DeletePreset(ctx, name)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}

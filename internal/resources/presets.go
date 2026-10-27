@@ -26,7 +26,7 @@ func RegisterPresets(s *server.MCPServer, acs *client.ACSClient) {
 	)
 
 	s.AddResource(res, func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-		body, err := acs.ListPresets()
+		body, err := acs.ListPresets(ctx)
 		if err != nil {
 			return nil, err
 		}
