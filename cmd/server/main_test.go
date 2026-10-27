@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/geiserx/genieacs-mcp/client"
+	"github.com/geiserx/genieacs-mcp/config"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -545,5 +546,46 @@ func TestNewHTTPServer_SetsTimeouts(t *testing.T) {
 	}
 	if srv.ReadHeaderTimeout <= 0 || srv.ReadTimeout <= 0 || srv.IdleTimeout <= 0 {
 		t.Errorf("timeouts not set: header %v, read %v, idle %v", srv.ReadHeaderTimeout, srv.ReadTimeout, srv.IdleTimeout)
+	}
+}
+
+func TestSelectTools_ReadOnlyKeepsOnlyReadOnlyTools(t *testing.T) {
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	got, err := selectTools(acs, config.ToolPolicy{ReadOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, rt := range got {
+		names = append(names, rt.tool.Name)
+		if h := rt.tool.Annotations.ReadOnlyHint; h == nil || !*h {
+			t.Errorf("read-only mode registered %s, which is not read-only", rt.tool.Name)
+		}
+	}
+	if strings.Join(names, ",") != "search_devices,get_parameter" {
+		t.Errorf("read-only tools = %v, want search_devices and get_parameter", names)
+	}
+}
+
+func TestSelectTools_Allowlist(t *testing.T) {
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	got, err := selectTools(acs, config.ToolPolicy{Allow: []string{"reboot_device", "get_parameter"}})
+	if err != nil || len(got) != 2 {
+		t.Fatalf("allowlist of two gave %d tools, err %v", len(got), err)
+	}
+	// Read-only mode and an allowlist combine: reboot_device is dropped.
+	got, _ = selectTools(acs, config.ToolPolicy{ReadOnly: true, Allow: []string{"reboot_device", "get_parameter"}})
+	if len(got) != 1 || got[0].tool.Name != "get_parameter" {
+		t.Errorf("read-only plus allowlist gave %d tools", len(got))
+	}
+	if _, err := selectTools(acs, config.ToolPolicy{Allow: []string{"reboot"}}); err == nil || !strings.Contains(err.Error(), "reboot_device") {
+		t.Errorf("an unknown tool name was not refused with the list of known tools: %v", err)
+	}
+}
+
+func TestNewMCPServer_UnknownToolIsAnError(t *testing.T) {
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	if _, err := newMCPServer(acs, serverOptions{tools: config.ToolPolicy{Allow: []string{"nope"}}}); err == nil {
+		t.Error("newMCPServer accepted an unknown tool in the allowlist")
 	}
 }

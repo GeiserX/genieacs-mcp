@@ -19,9 +19,9 @@ func RegisterCatalogue(s *server.MCPServer, acs *client.ACSClient, limit int) {
 		"genieacs://devices/list",
 		"Device summary list",
 		mcp.WithResourceDescription(
-			"Returns a lightweight JSON array of all CPE devices known to GenieACS (up to the configured "+
-				"DEVICE_LIMIT, default 500). Each entry includes the device _id, serial number, manufacturer, "+
-				"product class, and last inform timestamp. Use this resource as the starting point to discover "+
+			"Returns a lightweight JSON array of the CPE devices known to GenieACS (up to the configured "+
+				"DEVICE_LIMIT, default 500). Each entry has the device _id, _lastInform, _tags and _deviceId "+
+				"(_Manufacturer, _ProductClass, _SerialNumber). Use this resource as the starting point to discover "+
 				"device IDs before calling tools or fetching individual device details with genieacs://device/{id}. "+
 				"For more targeted queries, use the search_devices tool with MongoDB-style filters. "+
 				"The response is an array of JSON objects. Returns an empty array if no devices are registered.",

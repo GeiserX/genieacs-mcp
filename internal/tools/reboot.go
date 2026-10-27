@@ -1,43 +1,29 @@
-// internal/tools/reboot.go
-
 // Package tools defines the MCP tools that act on GenieACS. Each New function
 // returns a tool definition and the handler that calls the matching client
 // method; the server registers both.
-package tools // ← same package for every tool file
+package tools
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/geiserx/genieacs-mcp/client"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// NewReboot builds the Tool definition plus its handler.
-// Call it from main.go and register both parts.
+// NewReboot returns the reboot_device tool.
 func NewReboot(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
-
-	tool := mcp.NewTool("reboot_device",
+	tool := newTool("reboot_device", hints("Reboot device", false, true, false),
 		mcp.WithDescription(
-			"Reboot a CPE device through the GenieACS TR-069 ACS. "+
-				"Use this tool when a device needs to be restarted, for example after a configuration change, "+
-				"firmware update, or to recover from an unresponsive state. "+
-				"The device must exist in the GenieACS inventory — use genieacs://devices/list to discover valid IDs. "+
-				"Returns the raw JSON response from the ACS confirming the task was queued. "+
-				"Limitations: the reboot is asynchronous — the task is queued on the ACS and executed "+
-				"the next time the CPE contacts the ACS (via its periodic inform or a connection request). "+
-				"There is no confirmation that the device actually rebooted. "+
-				"Example: reboot_device(device_id=\"00236A-SmartRG585-SMRT00236a42\").",
+			"Reboot a CPE device through GenieACS. Use it when a device needs a restart, for example after a "+
+				"configuration change or to recover an unresponsive device. The device drops its service while it restarts. "+
+				"GenieACS queues the task and sends a connection request at once: status \"done\" means the device ran it "+
+				"in that session, \"queued\" means it runs at the device's next inform. A reboot does not confirm the device "+
+				"came back; read Device.DeviceInfo.UpTime (or InternetGatewayDevice.DeviceInfo.UpTime) with refresh_parameter afterwards. "+
+				"Example: reboot_device(device_id=\"202BC1-BM632w-000001\").",
 		),
-		mcp.WithString("device_id",
-			mcp.Required(),
-			mcp.Description(
-				"The exact GenieACS device identifier (_id field). "+
-					"Typically in the format OUI-ProductClass-SerialNumber (e.g. \"00236A-SmartRG585-SMRT00236a42\"). "+
-					"Obtain valid IDs from the genieacs://devices/list resource.",
-			),
-		),
+		deviceIDParam(),
+		mcp.WithOutputSchema[TaskOutput](),
 	)
 
 	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -45,16 +31,11 @@ func NewReboot(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-
-		resp, err := acs.RebootDevice(ctx, devID)
+		res, err := acs.RebootDevice(ctx, devID)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-
-		return mcp.NewToolResultText(
-			fmt.Sprintf("Reboot task queued/processed. Raw ACS response: %s", string(resp.Body)),
-		), nil
+		return taskResult(devID, "Reboot", res), nil
 	}
-
 	return tool, handler
 }

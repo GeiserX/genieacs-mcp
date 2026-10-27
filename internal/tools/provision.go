@@ -12,37 +12,28 @@ import (
 // NewManageProvision returns the manage_provision tool, which uploads, replaces
 // or deletes a GenieACS provision script by name.
 func NewManageProvision(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
-	tool := mcp.NewTool("manage_provision",
+	tool := newTool("manage_provision", hints("Create, replace or delete provision script", false, true, true),
 		mcp.WithDescription(
-			"Create, update, or delete a GenieACS provision script. Provision scripts are JavaScript "+
-				"functions that run on the ACS during a device's inform session to dynamically configure CPEs. "+
-				"Use action=\"put\" to upload a new provision script or overwrite an existing one. "+
-				"The script argument must be raw JavaScript source code (not JSON). "+
-				"Use action=\"delete\" to remove a provision script by name. "+
-				"GenieACS validates the script syntax on upload — a 400 error means the JavaScript has a syntax error. "+
-				"Provision scripts are referenced by name in presets (via configurations of type \"provision\"). "+
-				"Use genieacs://provisions/list to view existing scripts before making changes. "+
-				"Example script: log(\"Device \" + args[0] + \" informed\"); "+
-				"Limitations: provision scripts execute server-side in the GenieACS sandbox with a limited API "+
-				"(declare, commit, ext, log). They cannot make arbitrary HTTP calls or access the filesystem.",
+			"Create, replace or delete a GenieACS provision script. A provision is JavaScript that GenieACS runs during the "+
+				"inform session of every device a preset applies it to, so replacing one changes how those devices are configured. "+
+				"Scripts use the GenieACS sandbox API (declare, commit, clear, ext, log); ext() calls extension scripts that run on the "+
+				"ACS host with full privileges, so treat a provision as code running on your ACS. action=\"put\" uploads or overwrites "+
+				"the script (raw JavaScript, not JSON; GenieACS answers 400 on a syntax error); action=\"delete\" removes it. "+
+				"Presets reference provisions by name. Read genieacs://provisions/list first. "+
+				"Example script: log(\"Device \" + DeviceID.ID + \" informed\");",
 		),
 		mcp.WithString("action",
 			mcp.Required(),
-			mcp.Description(
-				"The operation to perform: \"put\" to create or update a provision, \"delete\" to remove it.",
-			),
+			mcp.Enum("put", "delete"),
+			mcp.Description("\"put\" creates or replaces the script, \"delete\" removes it."),
 		),
 		mcp.WithString("name",
 			mcp.Required(),
-			mcp.Description(
-				"The provision script name (used as the identifier in the URL).",
-			),
+			mcp.MinLength(1),
+			mcp.Description("The provision name, its id on GenieACS."),
 		),
 		mcp.WithString("script",
-			mcp.Description(
-				"The raw JavaScript source code of the provision script (required for action=\"put\", "+
-					"ignored for \"delete\"). GenieACS validates syntax before saving.",
-			),
+			mcp.Description("For action=\"put\": the JavaScript source. Ignored for \"delete\"."),
 		),
 	)
 
@@ -58,7 +49,7 @@ func NewManageProvision(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc
 
 		switch action {
 		case "put":
-			script, _ := req.GetArguments()["script"].(string)
+			script := req.GetString("script", "")
 			if script == "" {
 				return mcp.NewToolResultError("script is required for action=\"put\""), nil
 			}
@@ -66,21 +57,16 @@ func NewManageProvision(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			return mcp.NewToolResultText(
-				fmt.Sprintf("Provision \"%s\" saved. Raw ACS response: %s", name, string(resp)),
-			), nil
+			return mcp.NewToolResultText(fmt.Sprintf("Provision %q saved. ACS response: %s", name, string(resp))), nil
 		case "delete":
 			resp, err := acs.DeleteProvision(ctx, name)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			return mcp.NewToolResultText(
-				fmt.Sprintf("Provision \"%s\" deleted. Raw ACS response: %s", name, string(resp)),
-			), nil
+			return mcp.NewToolResultText(fmt.Sprintf("Provision %q deleted. ACS response: %s", name, string(resp))), nil
 		default:
-			return mcp.NewToolResultError(fmt.Sprintf("unknown action %q — use \"put\" or \"delete\"", action)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("unknown action %q: use \"put\" or \"delete\"", action)), nil
 		}
 	}
-
 	return tool, handler
 }

@@ -13,39 +13,26 @@ import (
 // NewSetParameter returns the set_parameter tool, which queues a
 // setParameterValues task on a device and asks GenieACS to run it at once.
 func NewSetParameter(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
-	tool := mcp.NewTool("set_parameter",
+	tool := newTool("set_parameter", hints("Set device parameters", false, true, true),
 		mcp.WithDescription(
-			"Set one or more TR-069 parameter values on a CPE device through GenieACS. "+
-				"Use this tool to change device configuration such as WiFi SSID, management server URL, "+
-				"periodic inform interval, or any writable TR-069 parameter. "+
-				"The parameter_values argument must be a JSON array of tuples, where each tuple is "+
-				"[parameterPath, value] or [parameterPath, value, xsdType]. "+
-				"Example: [[\"InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID\",\"MySSID\",\"xsd:string\"]]. "+
-				"Valid xsd types include xsd:string, xsd:boolean, xsd:unsignedInt, xsd:int, xsd:dateTime. "+
-				"If the type is omitted, GenieACS infers it from the value. "+
-				"The task is queued and a connection request is sent to the CPE for immediate execution. "+
-				"Returns the raw ACS JSON response confirming the task. "+
-				"Limitations: the CPE must be reachable for immediate execution; otherwise the task "+
-				"remains queued until the next periodic inform. Not all parameters are writable — "+
-				"the CPE will fault if you attempt to set a read-only parameter. "+
-				"Use refresh_parameter or genieacs://device/{id} first to discover valid parameter paths.",
+			"Write one or more TR-069 parameter values on a CPE device, overwriting the current values: WiFi SSID or key, "+
+				"periodic inform interval, management server URL, or any writable parameter. A wrong value can cut the device off "+
+				"(a wrong WAN or ACS URL setting, for example). parameter_values is a JSON array of [path, value] or "+
+				"[path, value, xsdType] tuples; xsd types include xsd:string, xsd:boolean, xsd:unsignedInt, xsd:int and xsd:dateTime, "+
+				"and GenieACS infers the type when it is omitted. "+
+				"Example: [[\"InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID\",\"Lab-2\",\"xsd:string\"]]. "+
+				"GenieACS queues the task and sends a connection request at once: status \"done\" means the device applied it, "+
+				"\"queued\" means it runs at the next inform. A read-only or unknown parameter makes the device fault the task; "+
+				"see genieacs://faults/{device_id}. Read the current value with get_parameter first.",
 		),
-		mcp.WithString("device_id",
-			mcp.Required(),
-			mcp.Description(
-				"The exact GenieACS device identifier (_id field). "+
-					"Typically in the format OUI-ProductClass-SerialNumber (e.g. \"00236A-SmartRG585-SMRT00236a42\"). "+
-					"Obtain valid IDs from the genieacs://devices/list resource.",
-			),
-		),
+		deviceIDParam(),
 		mcp.WithString("parameter_values",
 			mcp.Required(),
-			mcp.Description(
-				"A JSON array of parameter tuples to set. Each tuple is either "+
-					"[path, value] or [path, value, xsdType]. "+
-					"Example: [[\"Device.WiFi.SSID.1.SSID\",\"NewName\",\"xsd:string\"],[\"Device.ManagementServer.PeriodicInformInterval\",300,\"xsd:unsignedInt\"]]",
-			),
+			mcp.MinLength(2),
+			mcp.Description("JSON array of tuples, each [path, value] or [path, value, xsdType]. "+
+				"Example: [[\"Device.WiFi.SSID.1.SSID\",\"NewName\",\"xsd:string\"],[\"Device.ManagementServer.PeriodicInformInterval\",300,\"xsd:unsignedInt\"]]"),
 		),
+		mcp.WithOutputSchema[TaskOutput](),
 	)
 
 	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -53,24 +40,49 @@ func NewSetParameter(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-		pvStr, err := req.RequireString("parameter_values")
-		if err != nil {
+		pvStr, ok := stringOrJSON(req.GetArguments()["parameter_values"])
+		if !ok {
+			return mcp.NewToolResultError("required argument \"parameter_values\" not found"), nil
+		}
+		var tuples [][]any
+		if err := json.Unmarshal([]byte(pvStr), &tuples); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("parameter_values is not valid JSON: it must be an array of [path, value] or [path, value, xsdType] arrays: %v", err)), nil
+		}
+		if err := checkTuples(tuples); err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		var pv json.RawMessage
-		if err := json.Unmarshal([]byte(pvStr), &pv); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("parameter_values is not valid JSON: %v", err)), nil
-		}
-
-		resp, err := acs.SetParameterValues(ctx, devID, pv)
+		res, err := acs.SetParameterValues(ctx, devID, json.RawMessage(pvStr))
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-		return mcp.NewToolResultText(
-			fmt.Sprintf("setParameterValues task queued. Raw ACS response: %s", string(resp.Body)),
-		), nil
+		return taskResult(devID, fmt.Sprintf("Setting %d parameter(s)", len(tuples)), res), nil
 	}
-
 	return tool, handler
+}
+
+// checkTuples validates setParameterValues tuples before they reach GenieACS.
+func checkTuples(tuples [][]any) error {
+	if len(tuples) == 0 {
+		return fmt.Errorf("parameter_values is empty: give at least one [path, value] tuple")
+	}
+	for i, t := range tuples {
+		if len(t) < 2 || len(t) > 3 {
+			return fmt.Errorf("parameter_values[%d] has %d elements: each tuple is [path, value] or [path, value, xsdType]", i, len(t))
+		}
+		if p, ok := t[0].(string); !ok || p == "" {
+			return fmt.Errorf("parameter_values[%d][0] must be the parameter path as a string", i)
+		}
+		switch t[1].(type) {
+		case string, float64, bool:
+		default:
+			return fmt.Errorf("parameter_values[%d][1] must be a string, number or boolean", i)
+		}
+		if len(t) == 3 {
+			if typ, ok := t[2].(string); !ok || typ == "" {
+				return fmt.Errorf("parameter_values[%d][2] must be an xsd type such as \"xsd:string\"", i)
+			}
+		}
+	}
+	return nil
 }

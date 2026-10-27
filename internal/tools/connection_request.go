@@ -12,28 +12,14 @@ import (
 // NewConnectionRequest returns the connection_request tool, which asks GenieACS to
 // wake a CPE now without queuing a task.
 func NewConnectionRequest(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
-	tool := mcp.NewTool("connection_request",
+	tool := newTool("connection_request", hints("Wake device (connection request)", false, false, true),
 		mcp.WithDescription(
-			"Send a connection request to wake a CPE device without waiting for its periodic inform. "+
-				"Use this tool when you need the device to contact the ACS immediately, for example "+
-				"to execute pending tasks, apply preset changes, or force a parameter refresh. "+
-				"This sends an HTTP connection request to the CPE's management URL as configured "+
-				"in the TR-069 connection request mechanism. "+
-				"Returns 200 on success (the CPE acknowledged the request) or 504 if the CPE is "+
-				"unreachable (behind NAT, offline, or firewall blocking the connection request port). "+
-				"Example: connection_request(device_id=\"00236A-SmartRG585-SMRT00236a42\"). "+
-				"Limitations: the CPE must be network-reachable from the ACS for connection requests to work. "+
-				"Devices behind NAT without STUN/NAT traversal configured will not respond. "+
-				"This does not queue a task — it only triggers the CPE to initiate a CWMP session.",
+			"Send a TR-069 connection request so a CPE device contacts GenieACS now instead of at its next periodic inform. "+
+				"Use it to run tasks that are already queued, or to apply a preset change without waiting. It queues nothing itself. "+
+				"Succeeds when the device answered; fails with ACS error 504 when the device is unreachable "+
+				"(offline, or behind NAT without STUN). Example: connection_request(device_id=\"202BC1-BM632w-000001\").",
 		),
-		mcp.WithString("device_id",
-			mcp.Required(),
-			mcp.Description(
-				"The exact GenieACS device identifier (_id field). "+
-					"Typically in the format OUI-ProductClass-SerialNumber (e.g. \"00236A-SmartRG585-SMRT00236a42\"). "+
-					"Obtain valid IDs from the genieacs://devices/list resource.",
-			),
-		),
+		deviceIDParam(),
 	)
 
 	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -41,15 +27,13 @@ func NewConnectionRequest(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFu
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-
 		resp, err := acs.ConnectionRequest(ctx, devID)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 		return mcp.NewToolResultText(
-			fmt.Sprintf("Connection request sent to device %s. Raw ACS response: %s", devID, string(resp)),
+			fmt.Sprintf("Connection request sent to device %s; the device answered. ACS response: %s", devID, string(resp)),
 		), nil
 	}
-
 	return tool, handler
 }

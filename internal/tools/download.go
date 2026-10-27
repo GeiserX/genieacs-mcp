@@ -1,51 +1,36 @@
-// internal/tools/download.go
-
 package tools
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/geiserx/genieacs-mcp/client"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// NewDownloadFirmware defines the tool and its handler.
+// NewDownloadFirmware returns the download_firmware tool.
 func NewDownloadFirmware(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFunc) {
-
-	tool := mcp.NewTool("download_firmware",
+	tool := newTool("download_firmware", hints("Push firmware or file to device", false, true, false),
 		mcp.WithDescription(
-			"Push a firmware image or configuration file to a CPE device via GenieACS TR-069 download mechanism. "+
-				"Use this tool to initiate an OTA firmware upgrade or to push any file (config backups, supplementary data) to a device. "+
-				"The file must already be uploaded to GenieACS — use genieacs://file/{name} to inspect available files. "+
-				"Returns the raw JSON response from the ACS confirming the download task was queued. "+
-				"Limitations: the download is asynchronous — the ACS queues the task and the CPE fetches the file "+
-				"on its next session (periodic inform or connection request). Large firmware files may take minutes to transfer. "+
-				"Verify success by checking genieacs://tasks/{device_id} after allowing time for the transfer. "+
-				"Example: download_firmware(device_id=\"00236A-SmartRG585-SMRT00236a42\", file_id=\"firmware-v2.0.bin\").",
+			"Tell a CPE device to download and apply a file stored on GenieACS: a firmware image, a configuration file "+
+				"or another file the device accepts. A wrong image can leave a device unusable, so check the file's "+
+				"metadata (genieacs://file/{name}: OUI, product class, version) against the device first. "+
+				"GenieACS queues a download task and sends a connection request at once; the transfer itself can take "+
+				"minutes after the tool returns. Check genieacs://tasks/{device_id} and genieacs://faults/{device_id} "+
+				"afterwards. Example: download_firmware(device_id=\"202BC1-BM632w-000001\", file_id=\"firmware-v2.0.bin\").",
 		),
-		mcp.WithString("device_id",
-			mcp.Required(),
-			mcp.Description(
-				"The exact GenieACS device identifier (_id field). "+
-					"Typically in the format OUI-ProductClass-SerialNumber. "+
-					"Obtain valid IDs from the genieacs://devices/list resource.",
-			),
-		),
+		deviceIDParam(),
 		mcp.WithString("file_id",
 			mcp.Required(),
-			mcp.Description(
-				"The GridFS _id (filename) of the file to push to the device. "+
-					"Must match an existing file in GenieACS — use genieacs://file/{name} to verify it exists.",
-			),
+			mcp.MinLength(1),
+			mcp.Description("The _id of the file on GenieACS, which is its filename, e.g. \"firmware-v2.0.bin\". "+
+				"Check it exists with genieacs://file/{name}."),
 		),
 		mcp.WithString("filename",
-			mcp.Description(
-				"Optional display name passed to the CPE during the download. "+
-					"If omitted, the CPE receives the file_id as the filename.",
-			),
+			mcp.Description("Optional target file name sent to the device (TR-069 TargetFileName). "+
+				"Omit it to let the device choose."),
 		),
+		mcp.WithOutputSchema[TaskOutput](),
 	)
 
 	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -57,17 +42,11 @@ func NewDownloadFirmware(acs *client.ACSClient) (mcp.Tool, server.ToolHandlerFun
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-
-		name, _ := req.GetArguments()["filename"].(string)
-
-		resp, err := acs.DownloadFirmware(ctx, deviceID, fileID, name)
+		res, err := acs.DownloadFirmware(ctx, deviceID, fileID, req.GetString("filename", ""))
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-		return mcp.NewToolResultText(
-			fmt.Sprintf("Download task queued/processed. Raw ACS response: %s", string(resp.Body)),
-		), nil
+		return taskResult(deviceID, "Download of "+fileID, res), nil
 	}
-
 	return tool, handler
 }
