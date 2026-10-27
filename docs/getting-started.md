@@ -30,7 +30,7 @@ docker compose --profile mcp up -d
 ```
 
 It runs the HTTP transport on port 8080 (`http://localhost:8080/mcp`) and talks to the `genieacs`
-service's NBI. The image on its own is `drumsergio/genieacs-mcp:v0.3.3`.
+service's NBI. The image on its own is `drumsergio/genieacs-mcp:v0.3.7`.
 
 As published, the `mcp` profile listens on loopback inside its container, so `http://localhost:8080/mcp` is
 reachable only once the compose file sets `MCP_LISTEN_ADDR: 0.0.0.0:8080` and an `MCP_AUTH_TOKEN`, and from
@@ -53,11 +53,13 @@ go run ./cmd/server
 ## First run
 
 Add the server to your client, then ask it to list the devices, or read the `genieacs://devices/list`
-resource yourself. Over stdio the exchange looks like this (one JSON-RPC message per line):
+resource yourself. Over stdio the exchange looks like this (one JSON-RPC message per line). This is a
+2025-06-18 client; a 2026-07-28 client can skip `initialize` and send its version on every request,
+which the server also accepts:
 
 ```text
 -> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}
-<- {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"resources":{},"tools":{"listChanged":true}},"serverInfo":{"name":"GenieACS MCP Bridge",...}}}
+<- {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"resources":{},"tools":{}},"serverInfo":{"name":"GenieACS MCP Bridge","title":"GenieACS",...}}}
 -> {"jsonrpc":"2.0","method":"notifications/initialized"}
 -> {"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"genieacs://devices/list"}}
 <- {"jsonrpc":"2.0","id":2,"result":{"contents":[{"uri":"genieacs://devices/list","mimeType":"application/json","text":"[{\"_id\":\"202BC1-BM632w-000000\"}]"}]}}
@@ -67,7 +69,9 @@ When the ACS answers, `text` holds one entry per device, or `[]` when none is re
 `ACS_URL` is wrong, `initialize` still succeeds and the read fails with the connection error, for example:
 
 ```text
-<- {"jsonrpc":"2.0","id":2,"error":{"code":-32603,"message":"Get \"http://nothere:7557/devices?...\": dial tcp: lookup nothere ...: no such host"}}
+<- {"jsonrpc":"2.0","id":2,"error":{"code":-32603,"message":"cannot reach the GenieACS NBI; check ACS_URL and that the NBI is running"}}
 ```
+
+The message names no host or address; the full error, with the URL, is in the server's log.
 
 The server also logs a warning at startup when `ACS_USER` and `ACS_PASS` are not set.

@@ -31,7 +31,7 @@ func RegisterFile(s *server.MCPServer, acs *client.ACSClient) {
 			return nil, fmt.Errorf("missing file name")
 		}
 
-		body, err := acs.GetFileByName(name)
+		body, err := acs.GetFileByName(ctx, name)
 		if err != nil {
 			return nil, err
 		}

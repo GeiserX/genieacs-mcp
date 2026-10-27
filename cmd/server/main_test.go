@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/geiserx/genieacs-mcp/client"
+	"github.com/geiserx/genieacs-mcp/config"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -145,7 +146,7 @@ func TestNewMCPServer(t *testing.T) {
 	// Registering all resources and tools must not panic, and the server must
 	// be usable as an HTTP handler backend.
 	acs := client.NewACS("http://127.0.0.1:7557", "", "")
-	s := newMCPServer(acs, 500)
+	s := mustServer(t, acs)
 	if s == nil {
 		t.Fatal("newMCPServer returned nil")
 	}
@@ -158,7 +159,7 @@ func TestNewMCPServer(t *testing.T) {
 
 func TestRunStdio_ReturnsOnEOF(t *testing.T) {
 	acs := client.NewACS("http://127.0.0.1:7557", "", "")
-	s := newMCPServer(acs, 500)
+	s := mustServer(t, acs)
 	// An empty reader is immediately at EOF, so Listen returns cleanly.
 	done := make(chan error, 1)
 	go func() { done <- runStdio(context.Background(), s, strings.NewReader(""), io.Discard) }()
@@ -175,7 +176,7 @@ func TestRunStdio_ReturnsOnEOF(t *testing.T) {
 func TestRun_StdioTransport(t *testing.T) {
 	t.Setenv("TRANSPORT", "stdio")
 	acs := client.NewACS("http://127.0.0.1:7557", "", "")
-	s := newMCPServer(acs, 500)
+	s := mustServer(t, acs)
 	done := make(chan error, 1)
 	go func() { done <- run(context.Background(), s, strings.NewReader(""), io.Discard) }()
 	select {
@@ -193,7 +194,7 @@ func TestRun_HTTPTransport_ShutsDownOnContextCancel(t *testing.T) {
 	t.Setenv("MCP_LISTEN_ADDR", "127.0.0.1:0") // ephemeral port, avoids clashes
 	t.Setenv("MCP_AUTH_TOKEN", "")
 	acs := client.NewACS("http://127.0.0.1:7557", "", "")
-	s := newMCPServer(acs, 500)
+	s := mustServer(t, acs)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -223,7 +224,7 @@ func TestRun_HTTPTransport_AuthRequiredError(t *testing.T) {
 			t.Setenv("MCP_LISTEN_ADDR", addr)
 			t.Setenv("MCP_AUTH_TOKEN", "")
 			acs := client.NewACS("http://127.0.0.1:7557", "", "")
-			s := newMCPServer(acs, 500)
+			s := mustServer(t, acs)
 			err := run(context.Background(), s, nil, nil)
 			if !errors.Is(err, errAuthTokenRequired) {
 				t.Fatalf("run(%q) err = %v, want errAuthTokenRequired", addr, err)
@@ -411,7 +412,7 @@ func TestBuildHTTPHandler(t *testing.T) {
 	}
 
 	t.Run("no auth: guard still enforced", func(t *testing.T) {
-		h := buildHTTPHandler(backend, "127.0.0.1:8080", "", "", "")
+		h, _ := buildHTTPHandler(backend, "127.0.0.1:8080", "", "", "")
 		if code := request(h, "127.0.0.1:8080", "", ""); code != http.StatusOK {
 			t.Errorf("loopback request got %d, want 200", code)
 		}
@@ -421,7 +422,7 @@ func TestBuildHTTPHandler(t *testing.T) {
 	})
 
 	t.Run("auth: guard runs and bearer required", func(t *testing.T) {
-		h := buildHTTPHandler(backend, "127.0.0.1:8080", "tok", "", "")
+		h, _ := buildHTTPHandler(backend, "127.0.0.1:8080", "tok", "", "")
 		// Trusted host but missing token -> 401.
 		if code := request(h, "127.0.0.1:8080", "", ""); code != http.StatusUnauthorized {
 			t.Errorf("missing token got %d, want 401", code)
@@ -437,7 +438,7 @@ func TestBuildHTTPHandler(t *testing.T) {
 	})
 
 	t.Run("extra allowlists honoured", func(t *testing.T) {
-		h := buildHTTPHandler(backend, "127.0.0.1:8080", "", "acs.example.com", "https://app.example.com")
+		h, _ := buildHTTPHandler(backend, "127.0.0.1:8080", "", "acs.example.com", "https://app.example.com")
 		if code := request(h, "acs.example.com", "https://app.example.com", ""); code != http.StatusOK {
 			t.Errorf("allowlisted host/origin got %d, want 200", code)
 		}
@@ -458,5 +459,133 @@ func TestLoadHTTPEnv_PlaceholderValuesAreUnset(t *testing.T) {
 	}
 	if env.authToken != "" || env.allowedHosts != "" || env.allowedOrigin != "" {
 		t.Errorf("placeholder leaked into the HTTP config: %+v", env)
+	}
+}
+
+func mustServer(t *testing.T, acs *client.ACSClient) *server.MCPServer {
+	t.Helper()
+	s, err := newMCPServer(acs, serverOptions{deviceLimit: 500})
+	if err != nil {
+		t.Fatalf("newMCPServer: %v", err)
+	}
+	return s
+}
+
+func TestBearerAuth_Scheme(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
+	h := bearerAuth(backend, "s3cret")
+	for header, want := range map[string]int{
+		"Bearer s3cret":  http.StatusOK,
+		"bearer s3cret":  http.StatusOK, // the scheme is case-insensitive
+		"BEARER  s3cret": http.StatusOK,
+		"s3cret":         http.StatusUnauthorized, // a bare token is not a bearer credential
+		"Basic s3cret":   http.StatusUnauthorized,
+		"Bearer":         http.StatusUnauthorized,
+		"Bearer s3cretX": http.StatusUnauthorized,
+	} {
+		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/mcp", nil)
+		req.Header.Set("Authorization", header)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != want {
+			t.Errorf("Authorization %q got %d, want %d", header, rec.Code, want)
+		}
+		if rec.Code == http.StatusUnauthorized && !strings.HasPrefix(rec.Header().Get("WWW-Authenticate"), "Bearer") {
+			t.Errorf("401 for %q carries no WWW-Authenticate: Bearer challenge", header)
+		}
+	}
+}
+
+func TestBuildHTTPHandler_RejectsCrossSiteWithoutOrigin(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
+	h, err := buildHTTPHandler(backend, "127.0.0.1:8080", "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/mcp", nil)
+	req.Host = "127.0.0.1:8080"
+	req.Header.Set("Sec-Fetch-Site", "cross-site")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("cross-site browser POST got %d, want 403", rec.Code)
+	}
+}
+
+func TestBuildHTTPHandler_RejectsMalformedAllowedOrigin(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {})
+	if _, err := buildHTTPHandler(backend, "127.0.0.1:8080", "", "", "app.example.com"); err == nil {
+		t.Error("an origin without a scheme was accepted into MCP_ALLOWED_ORIGINS")
+	}
+}
+
+func TestBuildHTTPHandler_CapsRequestBody(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := io.ReadAll(r.Body); err != nil {
+			http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	h, _ := buildHTTPHandler(backend, "127.0.0.1:8080", "", "", "")
+	for size, want := range map[int]int{maxRequestBody: http.StatusOK, maxRequestBody + 1: http.StatusRequestEntityTooLarge} {
+		req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:8080/mcp", strings.NewReader(strings.Repeat("x", size)))
+		req.Host = "127.0.0.1:8080"
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != want {
+			t.Errorf("%d-byte body got %d, want %d", size, rec.Code, want)
+		}
+	}
+}
+
+func TestNewHTTPServer_SetsTimeouts(t *testing.T) {
+	_, srv, err := newHTTPServer(http.NotFoundHandler(), httpEnv{addr: "127.0.0.1:8080"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if srv.ReadHeaderTimeout <= 0 || srv.ReadTimeout <= 0 || srv.IdleTimeout <= 0 {
+		t.Errorf("timeouts not set: header %v, read %v, idle %v", srv.ReadHeaderTimeout, srv.ReadTimeout, srv.IdleTimeout)
+	}
+}
+
+func TestSelectTools_ReadOnlyKeepsOnlyReadOnlyTools(t *testing.T) {
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	got, err := selectTools(acs, config.ToolPolicy{ReadOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, rt := range got {
+		names = append(names, rt.tool.Name)
+		if h := rt.tool.Annotations.ReadOnlyHint; h == nil || !*h {
+			t.Errorf("read-only mode registered %s, which is not read-only", rt.tool.Name)
+		}
+	}
+	if strings.Join(names, ",") != "search_devices,get_parameter" {
+		t.Errorf("read-only tools = %v, want search_devices and get_parameter", names)
+	}
+}
+
+func TestSelectTools_Allowlist(t *testing.T) {
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	got, err := selectTools(acs, config.ToolPolicy{Allow: []string{"reboot_device", "get_parameter"}})
+	if err != nil || len(got) != 2 {
+		t.Fatalf("allowlist of two gave %d tools, err %v", len(got), err)
+	}
+	// Read-only mode and an allowlist combine: reboot_device is dropped.
+	got, _ = selectTools(acs, config.ToolPolicy{ReadOnly: true, Allow: []string{"reboot_device", "get_parameter"}})
+	if len(got) != 1 || got[0].tool.Name != "get_parameter" {
+		t.Errorf("read-only plus allowlist gave %d tools", len(got))
+	}
+	if _, err := selectTools(acs, config.ToolPolicy{Allow: []string{"reboot"}}); err == nil || !strings.Contains(err.Error(), "reboot_device") {
+		t.Errorf("an unknown tool name was not refused with the list of known tools: %v", err)
+	}
+}
+
+func TestNewMCPServer_UnknownToolIsAnError(t *testing.T) {
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	if _, err := newMCPServer(acs, serverOptions{tools: config.ToolPolicy{Allow: []string{"nope"}}}); err == nil {
+		t.Error("newMCPServer accepted an unknown tool in the allowlist")
 	}
 }

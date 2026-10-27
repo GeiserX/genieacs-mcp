@@ -1265,3 +1265,230 @@ func TestNewRetryTask_returns_tool_with_correct_name(t *testing.T) {
 		t.Errorf("expected tool name retry_task, got %s", tool.Name)
 	}
 }
+
+// ---------- annotations and structured output ----------
+
+func TestAllTools_declare_title_and_accurate_hints(t *testing.T) {
+	type want struct{ readOnly, destructive, idempotent bool }
+	expected := map[string]want{
+		"search_devices":     {true, false, true},
+		"get_parameter":      {true, false, true},
+		"refresh_parameter":  {false, false, true},
+		"connection_request": {false, false, true},
+		"retry_task":         {false, false, true},
+		"set_parameter":      {false, true, true},
+		"reboot_device":      {false, true, false},
+		"download_firmware":  {false, true, false},
+		"tag_device":         {false, true, true},
+		"manage_preset":      {false, true, true},
+		"manage_provision":   {false, true, true},
+		"delete_task":        {false, true, true},
+	}
+	acs := client.NewACS("http://127.0.0.1:7557", "", "")
+	seen := map[string]bool{}
+	for _, factory := range All() {
+		tool, _ := factory(acs)
+		w, ok := expected[tool.Name]
+		if !ok {
+			t.Errorf("tool %s has no expected annotations in this test", tool.Name)
+			continue
+		}
+		seen[tool.Name] = true
+		a := tool.Annotations
+		if tool.Title == "" || a.Title == "" {
+			t.Errorf("%s: missing title", tool.Name)
+		}
+		check := func(hint string, got *bool, want bool) {
+			if got == nil || *got != want {
+				t.Errorf("%s: %s = %v, want %v", tool.Name, hint, got, want)
+			}
+		}
+		check("readOnlyHint", a.ReadOnlyHint, w.readOnly)
+		check("destructiveHint", a.DestructiveHint, w.destructive)
+		check("idempotentHint", a.IdempotentHint, w.idempotent)
+		check("openWorldHint", a.OpenWorldHint, true)
+	}
+	if len(seen) != len(expected) {
+		t.Errorf("All() returned %d of the %d expected tools", len(seen), len(expected))
+	}
+}
+
+func structured[T any](t *testing.T, r *mcp.CallToolResult) T {
+	t.Helper()
+	var out T
+	b, err := json.Marshal(r.StructuredContent)
+	if err != nil || r.StructuredContent == nil {
+		t.Fatalf("result has no structured content: %v", err)
+	}
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatalf("structured content does not decode: %v", err)
+	}
+	return out
+}
+
+func TestTaskTools_report_done_or_queued(t *testing.T) {
+	for _, tc := range []struct {
+		status int
+		want   string
+	}{{http.StatusOK, "done"}, {http.StatusAccepted, "queued"}} {
+		acs, cleanup := newTestACS(t, func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(tc.status)
+			w.Write([]byte(`{"_id":"task-77","name":"reboot"}`))
+		})
+		_, handler := NewReboot(acs)
+		result := callTool(t, handler, map[string]any{"device_id": "dev-001"})
+		cleanup()
+		out := structured[TaskOutput](t, result)
+		if out.Status != tc.want || out.TaskID != "task-77" || out.DeviceID != "dev-001" {
+			t.Errorf("NBI %d: got %+v, want status %s and task-77", tc.status, out, tc.want)
+		}
+		if !strings.Contains(resultText(t, result), tc.want) && !strings.Contains(resultText(t, result), "ran on") {
+			t.Errorf("NBI %d: text does not say what happened: %s", tc.status, resultText(t, result))
+		}
+	}
+}
+
+func TestSearchDevices_refuses_code_running_operators(t *testing.T) {
+	acs, cleanup := newTestACS(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Error("the NBI must not be called")
+	})
+	defer cleanup()
+	_, handler := NewSearchDevices(acs)
+	for _, q := range []string{`{"$where":"sleep(1000)"}`, `{"$or":[{"a":1},{"$expr":{"$gt":["$a",1]}}]}`} {
+		result := callTool(t, handler, map[string]any{"query": q})
+		if !result.IsError {
+			t.Errorf("query %s was not refused", q)
+		}
+	}
+}
+
+func TestSearchDevices_caps_regex_length(t *testing.T) {
+	calls := 0
+	acs, cleanup := newTestACS(t, func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.Write([]byte(`[]`))
+	})
+	defer cleanup()
+	_, handler := NewSearchDevices(acs)
+
+	long := strings.Repeat("a", maxRegexLength+1)
+	for _, q := range []string{
+		`{"_id":{"$regex":"` + long + `"}}`,
+		`{"$or":[{"a":1},{"_id":{"$regex":"` + long + `"}}]}`,
+	} {
+		result := callTool(t, handler, map[string]any{"query": q})
+		if !result.IsError || !strings.Contains(resultText(t, result), "$regex") {
+			t.Errorf("a %d-character $regex was not refused", len(long))
+		}
+	}
+	if calls != 0 {
+		t.Errorf("the NBI was called %d times for refused queries", calls)
+	}
+
+	ok := strings.Repeat("a", maxRegexLength)
+	result := callTool(t, handler, map[string]any{"query": `{"_id":{"$regex":"` + ok + `"}}`})
+	if result.IsError {
+		t.Errorf("a %d-character $regex was refused: %s", len(ok), resultText(t, result))
+	}
+}
+
+func TestSearchDevices_pages_and_projects(t *testing.T) {
+	var got map[string]string
+	acs, cleanup := newTestACS(t, func(w http.ResponseWriter, r *http.Request) {
+		got = map[string]string{}
+		for k := range r.URL.Query() {
+			got[k] = r.URL.Query().Get(k)
+		}
+		w.Write([]byte(`[{"_id":"a"},{"_id":"b"}]`))
+	})
+	defer cleanup()
+	_, handler := NewSearchDevices(acs)
+
+	result := callTool(t, handler, map[string]any{"query": `{}`, "limit": float64(500)})
+	if got["limit"] != "200" {
+		t.Errorf("limit 500 reached the NBI as %q, want 200", got["limit"])
+	}
+	if got["projection"] != client.DeviceSummaryProjection {
+		t.Errorf("default projection = %q, want the summary fields", got["projection"])
+	}
+	out := structured[SearchOutput](t, result)
+	if out.Count != 2 || out.More || len(out.Devices) != 2 {
+		t.Errorf("structured output = %+v", out)
+	}
+
+	result = callTool(t, handler, map[string]any{"query": `{}`, "limit": float64(2), "skip": float64(4), "projection": "all", "sort": `{"_lastInform":-1}`})
+	if _, ok := got["projection"]; ok {
+		t.Errorf("projection=all still sent projection %q", got["projection"])
+	}
+	if got["skip"] != "4" || got["sort"] != `{"_lastInform":-1}` {
+		t.Errorf("skip/sort not passed: %v", got)
+	}
+	if out := structured[SearchOutput](t, result); !out.More {
+		t.Errorf("a full page must set more: %+v", out)
+	}
+}
+
+func TestGetParameter_flattens_nested_documents(t *testing.T) {
+	acs, cleanup := newTestACS(t, okHandler(`[{"_id":"dev-001","Device":{"DeviceInfo":{
+		"SoftwareVersion":{"_value":"2.1","_type":"xsd:string","_timestamp":"2026-10-01T10:00:00.000Z"},
+		"UpTime":{"_value":3600,"_type":"xsd:unsignedInt"}}}}]`))
+	defer cleanup()
+	_, handler := NewGetParameter(acs)
+	result := callTool(t, handler, map[string]any{
+		"device_id":      "dev-001",
+		"parameter_path": "Device.DeviceInfo, Device.WiFi.SSID.1.SSID",
+	})
+	out := structured[GetParameterOutput](t, result)
+	if !out.Found {
+		t.Fatal("found = false for an existing device")
+	}
+	sv := out.Parameters["Device.DeviceInfo.SoftwareVersion"]
+	if sv.Value != "2.1" || sv.Type != "xsd:string" || sv.Timestamp == "" {
+		t.Errorf("SoftwareVersion = %+v", sv)
+	}
+	if up := out.Parameters["Device.DeviceInfo.UpTime"]; up.Value != float64(3600) {
+		t.Errorf("UpTime = %+v", up)
+	}
+	if len(out.Missing) != 1 || out.Missing[0] != "Device.WiFi.SSID.1.SSID" {
+		t.Errorf("missing = %v, want the WiFi path", out.Missing)
+	}
+}
+
+func TestGetParameter_reports_unknown_device(t *testing.T) {
+	acs, cleanup := newTestACS(t, okHandler(`[]`))
+	defer cleanup()
+	_, handler := NewGetParameter(acs)
+	result := callTool(t, handler, map[string]any{"device_id": "nope", "parameter_path": "Device.X"})
+	if out := structured[GetParameterOutput](t, result); out.Found {
+		t.Errorf("found = true for an empty NBI answer")
+	}
+	if !strings.Contains(resultText(t, result), "No device") {
+		t.Errorf("text = %s", resultText(t, result))
+	}
+}
+
+func TestSetParameter_rejects_malformed_tuples(t *testing.T) {
+	acs, cleanup := newTestACS(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Error("the NBI must not be called")
+	})
+	defer cleanup()
+	_, handler := NewSetParameter(acs)
+	for _, pv := range []string{`[]`, `[["Device.X"]]`, `[["Device.X","v","t","extra"]]`, `[[1,"v"]]`, `[["Device.X",{"a":1}]]`, `{"a":1}`} {
+		if result := callTool(t, handler, map[string]any{"device_id": "dev-001", "parameter_values": pv}); !result.IsError {
+			t.Errorf("parameter_values %s was accepted", pv)
+		}
+	}
+}
+
+func TestManagePreset_rejects_non_object_body(t *testing.T) {
+	acs, cleanup := newTestACS(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Error("the NBI must not be called")
+	})
+	defer cleanup()
+	_, handler := NewManagePreset(acs)
+	for _, body := range []string{`not json`, `[1,2]`} {
+		if result := callTool(t, handler, map[string]any{"action": "put", "name": "p", "body": body}); !result.IsError {
+			t.Errorf("body %s was accepted", body)
+		}
+	}
+}

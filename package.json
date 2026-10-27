@@ -23,11 +23,14 @@
     "genieacs-mcp": "run.js"
   },
   "scripts": {
-    "postinstall": "node postinstall.js"
+    "postinstall": "node postinstall.js",
+    "test": "node --test"
   },
   "files": [
     "run.js",
-    "postinstall.js"
+    "install.js",
+    "postinstall.js",
+    "checksums.txt"
   ],
   "engines": {
     "node": ">=18"

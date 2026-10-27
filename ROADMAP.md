@@ -18,7 +18,6 @@
 - [ ] **Health check endpoint** - `/health` endpoint reporting ACS connectivity status
 - [ ] **Structured logging** - JSON-formatted logs with request tracing
 - [ ] **Prometheus metrics** - Expose request counts, latencies, and error rates at `/metrics`
-- [ ] **Request timeout configuration** - Make HTTP timeout to GenieACS NBI configurable (currently uses Go default)
 - [ ] **Pagination support** - Add cursor/offset pagination for device lists and task queries
 - [ ] **Virtual parameter support** - Read and manage GenieACS virtual parameters (PUT/DELETE /virtual_parameters/{name})
 
@@ -26,11 +25,9 @@
 
 - [ ] **Integration tests** - Test tool and resource handlers against a mock ACS server
 - [ ] **Resource handler tests** - Unit tests for all seven resource handlers (currently untested)
-- [ ] **Tool handler tests** - Unit tests for all twelve tool handlers (currently untested)
+- [ ] **Tool handler tests** - Unit tests for the tool handlers not yet covered
 - [ ] **golangci-lint in CI** - Add linter beyond the current `go vet` / `go test`
-- [ ] **MCP protocol conformance tests** - Validate JSON-RPC responses against the MCP spec
 - [ ] **Docker Compose dev environment** - Spin up GenieACS + simulator + MCP server for local development
-- [ ] **Streamable HTTP session management** - Proper session lifecycle with cleanup for HTTP transport
 
 ## Ideas / Backlog
 
@@ -62,3 +59,7 @@
 - [x] `connection_request` tool — wake CPE without waiting for periodic inform
 - [x] `delete_task`, `retry_task` tools — task lifecycle management
 - [x] Configurable device list limit via `DEVICE_LIMIT` environment variable
+- [x] MCP 2026-07-28 alongside every earlier version back to 2024-11-05, stateless HTTP, protocol tests for both eras
+- [x] Configurable NBI timeout (`ACS_TIMEOUT`) and response cap (`ACS_MAX_RESPONSE_BYTES`)
+- [x] Read-only mode (`GENIEACS_READ_ONLY`) and tool allowlist (`GENIEACS_TOOLS`)
+- [x] Accurate tool annotations, structured tool results with output schemas, `search_devices` paging and projection

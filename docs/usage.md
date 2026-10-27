@@ -32,14 +32,16 @@ tools it can call, and which of them change something.
 ## Tools
 
 Two tools only read. The other ten queue a task on a device (the ACS sends a connection request at once,
-so a reachable device runs it within seconds), wake a device, or change the ACS. There is no read-only
-mode: the tool list is the same for every client, so use your client's approval prompts for the ones
-that act.
+so a reachable device runs it within seconds), wake a device, or change the ACS. Each tool's annotations
+say which. The two readers carry `readOnlyHint`. The rest say whether they are destructive and whether
+running them twice is the same as once, so your client can ask before the ones that act.
+`GENIEACS_READ_ONLY=true` serves only the two readers, and `GENIEACS_TOOLS` serves only the tools you name
+(see [Configuration](configuration.md)).
 
 | Tool | Arguments | What it does | Reads or acts |
 |---|---|---|---|
-| `search_devices` | `query` (JSON string, MongoDB syntax), `limit` (default 50) | Finds devices by tag, manufacturer, model, firmware, last inform or any parameter. Comparison operators only (`$eq`, `$ne`, `$gt`, `$lt`, `$gte`, `$lte`, `$regex`, `$in`, `$nin`, `$exists`). | reads |
-| `get_parameter` | `device_id`, `parameter_path` (one path or a comma-separated list) | Returns the last values the ACS has for those parameters, without contacting the device. Stale if the device has not informed recently. | reads |
+| `search_devices` | `query` (JSON string, MongoDB syntax), `limit` (1 to 200, default 50), `skip`, `projection` (default a summary; `all` for full documents), `sort` (JSON, e.g. `{"_lastInform":-1}`) | Finds devices by tag, manufacturer, model, firmware, last inform or any parameter. Query operators such as `$eq`, `$ne`, `$gt`, `$lt`, `$in`, `$nin`, `$exists`, `$regex`, `$and` and `$or` work; `$where`, `$function`, `$accumulator` and `$expr` are refused because they run code on the ACS database, and a `$regex` pattern may be at most 256 characters. Returns `count`, `more` (another page exists) and the devices. | reads |
+| `get_parameter` | `device_id`, `parameter_path` (one path or a comma-separated list) | Returns the last values the ACS has for those parameters, without contacting the device, as `parameters` (path to `value`, `type`, `timestamp`) plus the paths it has no value for in `missing`. Stale if the device has not informed recently. | reads |
 | `refresh_parameter` | `device_id`, `parameter` | Asks the device to report one parameter's current value; read it afterwards from `genieacs://device/{id}`. | acts |
 | `set_parameter` | `device_id`, `parameter_values` (JSON array of `[path, value]` or `[path, value, xsdType]` tuples; example below the table) | Writes parameter values on the device; the type is inferred when omitted. | acts |
 | `reboot_device` | `device_id` | Reboots the device. No confirmation that it came back; check uptime afterwards. | acts |
@@ -63,10 +65,19 @@ A `parameter_values` example for `set_parameter`, renaming the WiFi network:
 ]
 ```
 
+The two readers (`search_devices`, `get_parameter`) and the four task tools below answer with structured
+content as well as text, and declare their output schema; the other six tools answer with text. The tools that
+queue a task (`refresh_parameter`, `set_parameter`, `reboot_device`, `download_firmware`) return `status`:
+`done` when the device ran the task during the call (the NBI answered 200), `queued` when it was not
+reachable in time and the task waits for its next inform (202). A queued task is listed under
+`genieacs://tasks/{id}` until it runs.
+
 ![MCP Inspector, Tools tab: set_parameter run on a simulated device to change its WiFi SSID, the result showing the setParameterValues task document the ACS returned](images/screenshots/set-parameter.png)
 
 ## On the wire
 
-The client speaks MCP JSON-RPC to the server: `initialize`, then `resources/list`, `resources/read`,
-`tools/list` and `tools/call`. Over HTTP everything goes to the single `/mcp` endpoint; over stdio,
+The client speaks MCP JSON-RPC to the server. A 2026-07-28 client may start with `server/discover` and
+send its protocol version on every request; an older one starts with `initialize`. After that both use
+`resources/list`, `resources/read`, `tools/list` and `tools/call`. The list results carry a five-minute
+cache hint, so a client need not ask again on every turn. Over HTTP everything goes to the single `/mcp` endpoint; over stdio,
 one JSON-RPC message per line. A worked exchange is on [Getting started](getting-started.md#first-run).

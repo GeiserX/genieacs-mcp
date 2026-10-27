@@ -155,3 +155,52 @@ func TestLoadACSConfig_PlaceholderValuesAreUnset(t *testing.T) {
 		t.Errorf("DeviceLimit = %d, want the default 500", cfg.DeviceLimit)
 	}
 }
+
+func TestLoadACSConfig_LimitsAndTimeout(t *testing.T) {
+	t.Setenv("ACS_MAX_RESPONSE_BYTES", "1048576")
+	t.Setenv("ACS_TIMEOUT", "5")
+	cfg := LoadACSConfig()
+	if cfg.MaxResponseBytes != 1<<20 || cfg.Timeout.Seconds() != 5 {
+		t.Errorf("got max %d, timeout %v; want 1048576 and 5s", cfg.MaxResponseBytes, cfg.Timeout)
+	}
+	t.Setenv("ACS_MAX_RESPONSE_BYTES", "lots")
+	t.Setenv("ACS_TIMEOUT", "-3")
+	cfg = LoadACSConfig()
+	if cfg.MaxResponseBytes != 0 || cfg.Timeout != 0 {
+		t.Errorf("invalid values were not ignored: max %d, timeout %v", cfg.MaxResponseBytes, cfg.Timeout)
+	}
+}
+
+func TestCleartextToRemote(t *testing.T) {
+	for base, want := range map[string]bool{
+		"http://localhost:7557":      false,
+		"http://127.0.0.1:7557":      false,
+		"http://[::1]:7557":          false,
+		"https://acs.example.com":    false,
+		"http://acs.example.com":     true,
+		"http://192.168.1.10:7557":   true,
+		"HTTP://genieacs:7557/nbi/x": true,
+	} {
+		if got := cleartextToRemote(base); got != want {
+			t.Errorf("cleartextToRemote(%q) = %v, want %v", base, got, want)
+		}
+	}
+}
+
+func TestLoadToolPolicy(t *testing.T) {
+	t.Setenv("GENIEACS_READ_ONLY", "")
+	t.Setenv("GENIEACS_TOOLS", "")
+	if p := LoadToolPolicy(); p.ReadOnly || len(p.Allow) != 0 {
+		t.Errorf("empty env gave %+v, want everything allowed", p)
+	}
+	t.Setenv("GENIEACS_READ_ONLY", "TRUE")
+	t.Setenv("GENIEACS_TOOLS", " search_devices, ,get_parameter ")
+	p := LoadToolPolicy()
+	if !p.ReadOnly || len(p.Allow) != 2 || p.Allow[0] != "search_devices" || p.Allow[1] != "get_parameter" {
+		t.Errorf("got %+v", p)
+	}
+	t.Setenv("GENIEACS_READ_ONLY", "${GENIEACS_READ_ONLY}")
+	if LoadToolPolicy().ReadOnly {
+		t.Error("an unexpanded placeholder turned read-only mode on")
+	}
+}

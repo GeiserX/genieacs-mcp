@@ -31,3 +31,6 @@ node_modules/
 
 # MkDocs build output
 site/
+
+# Written by release.yml right before npm publish; the npm package carries it.
+/checksums.txt

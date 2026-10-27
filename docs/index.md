@@ -58,7 +58,7 @@ An MCP client sees 7 resources it can read (`genieacs://devices/list`, `genieacs
 
 - `search_devices`, `get_parameter` and the seven resources only read the ACS; `get_parameter` answers from the ACS cache without contacting the device.
 - The other ten tools queue a task on a device (reboot, firmware download, refresh or set a parameter), wake it with a connection request, or change the ACS (tags, presets, provisions, tasks). GenieACS sends the connection request at once, so a reachable device runs the task within seconds.
-- There is no read-only mode. Point the server at an ACS you are willing to let an assistant act on, and keep your client's tool-approval prompts on. [Usage](usage.md#tools) marks every tool.
+- Each tool's annotations say whether it reads, acts, or destroys something, so a client can ask before the ones that act. `GENIEACS_READ_ONLY=true` serves only the two reading tools, and `GENIEACS_TOOLS` serves only the tools you name; see [Configuration](configuration.md). [Usage](usage.md#tools) marks every tool.
 
 ## How it runs
 
@@ -80,7 +80,7 @@ flowchart LR
 ## What it does not do
 
 - It does not talk to devices directly. Everything goes through the GenieACS NBI, so a device the ACS cannot reach (NAT, offline) fails the same way it would in the GenieACS UI: a `connection_request` returns 504 and a queued task waits.
-- It does not confirm that a task ran. A tool answers with the task document the ACS returned; the device's own state, read afterwards from `genieacs://device/{id}`, is the proof.
+- It reports whether a task ran but not its effect. A task tool answers `done` when the device ran the task during the call and `queued` when it waits for the next inform; the device's own state, read afterwards from `genieacs://device/{id}`, is the proof of the result.
 - It does not store anything. No database, no cache of its own; `get_parameter` reads the ACS's cache.
 - It does not upload files to the ACS yet; `upload_file`, `delete_file` and a `files/list` resource are on the [roadmap](https://github.com/GeiserX/genieacs-mcp/blob/main/ROADMAP.md).
 
