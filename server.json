@@ -18,12 +18,12 @@
     "source": "github",
     "id": "989073503"
   },
-  "version": "0.3.7",
+  "version": "0.4.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "genieacs-mcp",
-      "version": "0.3.7",
+      "version": "0.4.0",
       "transport": {
         "type": "stdio"
       },
@@ -93,7 +93,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "drumsergio/genieacs-mcp:v0.3.7",
+      "identifier": "drumsergio/genieacs-mcp:v0.4.0",
       "transport": {
         "type": "stdio"
       },
