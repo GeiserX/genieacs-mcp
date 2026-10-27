@@ -23,13 +23,13 @@ jobs:
       contents: read
       id-token: write
     env:
-      MCP_PUBLISHER_VERSION: v1.8.1
+      MCP_PUBLISHER_VERSION: v1.8.5
       # sha256 of mcp-publisher_linux_amd64.tar.gz for that version, from the
       # release's checksums file. Pinned here so a replaced release asset is
       # refused instead of run with an OIDC token that can publish.
-      MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+      MCP_PUBLISHER_SHA256: 2d151ac57275c9a6684d9d22b1cba81058bab195ea0a162e8fce3c6a5ec32812
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install mcp-publisher

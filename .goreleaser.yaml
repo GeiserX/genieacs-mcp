@@ -111,3 +111,7 @@ changelog:
       regexp: '^feat'
     - title: "🐛 Fixes"
       regexp: '^fix'
+    # Catch-all, so a release made only of chore, ci or docs commits still
+    # gets notes instead of an empty "Changelog" heading.
+    - title: "Other changes"
+      order: 999
