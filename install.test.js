@@ -4,8 +4,9 @@ const test = require("node:test");
 const assert = require("node:assert");
 const fs = require("fs");
 const os = require("os");
+const net = require("net");
 const path = require("path");
-const { assetName, parseChecksums, expectedSha256, checkRedirect } = require("./install");
+const { assetName, parseChecksums, expectedSha256, checkRedirect, download } = require("./install");
 
 const SUM = "a".repeat(64);
 
@@ -39,4 +40,25 @@ test("assetName maps platforms to release assets", () => {
   assert.match(assetName("linux", "x64"), /_linux_amd64\.tar\.gz$/);
   assert.match(assetName("win32", "arm64"), /_windows_arm64\.zip$/);
   assert.throws(() => assetName("aix", "ppc64"), /unsupported/);
+});
+
+test("download gives up on a server that never answers", { timeout: 5000 }, async () => {
+  // Accepts the TCP connection and then says nothing, not even the TLS handshake.
+  const sockets = [];
+  const server = net.createServer((s) => sockets.push(s));
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const dest = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "gmcp-")), "x");
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("download never gave up")), 2000);
+  });
+  try {
+    const got = download(`https://127.0.0.1:${server.address().port}/x`, dest, 0, 200);
+    got.catch(() => {});
+    await assert.rejects(Promise.race([got, deadline]), /stalled/);
+  } finally {
+    clearTimeout(timer);
+    sockets.forEach((s) => s.destroy());
+    server.close();
+  }
 });

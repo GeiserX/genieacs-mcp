@@ -21,6 +21,9 @@ const BIN_PATH = path.join(BIN_DIR, BIN_NAME);
 const CHECKSUMS_PATH = path.join(__dirname, "checksums.txt");
 const MAX_REDIRECTS = 5;
 const MAX_DOWNLOAD_BYTES = 200 * 1024 * 1024;
+// A connection that sends nothing for this long is dropped, so a stalled
+// download fails with a message instead of hanging the MCP client on start.
+const DOWNLOAD_IDLE_MS = 30 * 1000;
 
 function log(msg) {
   // stderr only: run.js shares stdout with the MCP client.
@@ -74,8 +77,9 @@ function checkRedirect(location, base) {
 }
 
 // download streams url to dest, following at most MAX_REDIRECTS https
-// redirects, and resolves with the sha256 of what it wrote.
-function download(url, dest, redirects = 0) {
+// redirects, and resolves with the sha256 of what it wrote. It fails when the
+// connection is idle for idleMs.
+function download(url, dest, redirects = 0, idleMs = DOWNLOAD_IDLE_MS) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { headers: { "User-Agent": "genieacs-mcp-installer" } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -89,7 +93,7 @@ function download(url, dest, redirects = 0) {
         } catch (err) {
           return reject(err);
         }
-        return download(next, dest, redirects + 1).then(resolve, reject);
+        return download(next, dest, redirects + 1, idleMs).then(resolve, reject);
       }
       if (res.statusCode !== 200) {
         res.resume();
@@ -113,6 +117,9 @@ function download(url, dest, redirects = 0) {
       res.pipe(out);
       out.on("error", reject);
       out.on("finish", () => resolve(hash.digest("hex")));
+    });
+    req.setTimeout(idleMs, () => {
+      req.destroy(new Error(`download stalled: no data for ${idleMs / 1000}s`));
     });
     req.on("error", reject);
   });
@@ -154,4 +161,4 @@ async function ensureBinary() {
   }
 }
 
-module.exports = { BIN_PATH, assetName, parseChecksums, expectedSha256, checkRedirect, ensureBinary };
+module.exports = { BIN_PATH, assetName, parseChecksums, expectedSha256, checkRedirect, download, ensureBinary };
