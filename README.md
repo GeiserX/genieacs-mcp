@@ -61,7 +61,7 @@ The same server in other clients:
 claude mcp add --transport stdio --env ACS_URL=http://localhost:7557 genieacs -- npx -y genieacs-mcp
 
 # Docker, over stdio (any client that starts a command)
-docker run -i --rm -e ACS_URL=http://host.docker.internal:7557 drumsergio/genieacs-mcp:v0.3.7
+docker run -i --rm -e ACS_URL=http://host.docker.internal:7557 drumsergio/genieacs-mcp:v0.4.0
 ```
 
 ```jsonc

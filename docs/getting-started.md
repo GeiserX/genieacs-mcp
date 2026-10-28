@@ -30,7 +30,7 @@ docker compose --profile mcp up -d
 ```
 
 It runs the HTTP transport on port 8080 (`http://localhost:8080/mcp`) and talks to the `genieacs`
-service's NBI. The image on its own is `drumsergio/genieacs-mcp:v0.3.7`.
+service's NBI. The image on its own is `drumsergio/genieacs-mcp:v0.4.0`.
 
 As published, the `mcp` profile listens on loopback inside its container, so `http://localhost:8080/mcp` is
 reachable only once the compose file sets `MCP_LISTEN_ADDR: 0.0.0.0:8080` and an `MCP_AUTH_TOKEN`, and from
