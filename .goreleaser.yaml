@@ -9,6 +9,12 @@ release:
 builds:
   - id: bin
     main: ./cmd/server
+    # Static, with no libc dependency. Go turns cgo on for a native build when
+    # a C compiler is present, so on the amd64 runner the linux binary linked
+    # glibc and would not start on Alpine or NixOS; arm64 was static only
+    # because it is cross-compiled.
+    env:
+      - CGO_ENABLED=0
     goos: [linux, windows, darwin]
     goarch: [amd64, arm64]
     ldflags:
