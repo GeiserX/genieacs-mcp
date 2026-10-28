@@ -43,9 +43,12 @@ jobs:
     needs: check-version
     runs-on: ubuntu-latest
     # The release itself is created with GH_RELEASE_TOKEN; Docker Hub and Apple
-    # use their own secrets. Nothing here needs more than contents: write.
+    # use their own secrets. id-token and attestations write let the job sign
+    # build provenance for the archives (the attestation step after GoReleaser).
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -94,6 +97,11 @@ jobs:
           MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
           MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
           MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+      # Signed build provenance for every archive in checksums.txt, stored by
+      # GitHub and checkable with: gh attestation verify <archive> --repo <owner/repo>
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: dist/checksums.txt
       # The npm package ships this file, and postinstall.js checks the
       # downloaded binary against it, so the checksum comes from the package
       # npm verified rather than from the mutable GitHub release.
