@@ -99,7 +99,10 @@ jobs:
           MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
       # Signed build provenance for every archive in checksums.txt, stored by
       # GitHub and checkable with: gh attestation verify <archive> --repo <owner/repo>
+      # GoReleaser has already published the release here, so a failed
+      # attestation must not stop the npm and registry jobs that follow.
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        continue-on-error: true
         with:
           subject-checksums: dist/checksums.txt
       # The npm package ships this file, and postinstall.js checks the
