@@ -9,7 +9,7 @@
 # Bases are pinned by digest (Dependabot keeps them current). The builder is
 # the exact Go release go.mod names, so the eMudhra-rejecting go1.27.3 is the
 # one that builds the image.
-FROM golang:1.27.3@sha256:9048d5e7751706200eb1719c7dae0436950d362f29a1da91fa05e5c63867c60f AS builder
+FROM golang:1.27.3@sha256:2920bb124f1a2e12a1d39f0cab756ae0068441ee1da7655dec7f5e374944095b AS builder
 LABEL maintainer="acsdesk@protonmail.com"
 
 WORKDIR /src
