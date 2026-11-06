@@ -29,7 +29,7 @@ bin/
 node_modules/
 .mcpregistry_*
 
-# MkDocs build output
+# Docs site build output (zensical build)
 site/
 
 # Written by release.yml right before npm publish; the npm package carries it.

@@ -3,7 +3,7 @@
  * banner.svg draws the wordmark in #16241b on a #f7f8f6 plate, the arcs of
  * the mark and the "mcp" of the wordmark in #0F8630, and the whale and the
  * divider in #67B028. The header uses the wordmark colour, the accent the
- * whale green. mkdocs.yml sets primary and accent to custom, so nothing is
+ * whale green. zensical.toml sets primary and accent to custom, so nothing is
  * painted until these variables exist.
  */
 :root {
@@ -42,10 +42,16 @@
    Only the first topic is styled; Material puts the page title in a second
    .md-header__topic and swaps them on scroll. */
 .md-header__topic:first-child .md-ellipsis {
-  color: #f2f6f2;
   font-family: var(--md-code-font-family);
   font-weight: 800;
   letter-spacing: -0.01em;
+}
+
+/* That colour only on the dark scheme: Zensical's modern header takes the page
+   background, so on the light scheme it is white and a light name would vanish.
+   There the name keeps the default text colour. */
+[data-md-color-scheme="slate"] .md-header__topic:first-child .md-ellipsis {
+  color: #f2f6f2;
 }
 
 /* Keep the mark and the name close, so they read as one unit. */
