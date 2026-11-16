@@ -7,9 +7,9 @@
 # Stage 1 – build the Go binary
 # ───────────────────────────────────────────────
 # Bases are pinned by digest (Dependabot keeps them current). The builder is
-# the exact Go release go.mod names, so the eMudhra-rejecting go1.27.3 is the
-# one that builds the image.
-FROM golang:1.27.3@sha256:e519d3b0a5b285e5aa53ab9eef02bc6bbb9cb04608389b743a136a9ce75f0d1e AS builder
+# the exact Go release go.mod names, so go1.27.4 (eMudhra-rejecting, and fixed
+# for GO-2026-6859) is the one that builds the image.
+FROM golang:1.27.4@sha256:205c7636d74e0ffbe3d007162df7d74f859f5a8c8322dfb9f907977686c126cf AS builder
 LABEL maintainer="acsdesk@protonmail.com"
 
 WORKDIR /src
