@@ -4,7 +4,7 @@
 MCP (Model Context Protocol) server for GenieACS written in Go. Exposes any GenieACS instance as an MCP server (protocol 2026-07-28 and every earlier version back to 2024-11-05), enabling LLMs to read device data and invoke TR-069 actions (reboot, firmware push, parameter get/set, presets, provisions).
 
 ## Tech Stack
-- Go 1.25+ (toolchain go1.27.4), mcp-go v1.4.0
+- Go 1.25+ (toolchain go1.27.4), mcp-go v1.5.0
 - MCP 2026-07-28 and legacy eras (JSON-RPC); stateless HTTP, never drop legacy support
 - Docker (image: `drumsergio/genieacs-mcp`)
 - npm package for stdio transport (`npx genieacs-mcp`)
