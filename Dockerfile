@@ -32,7 +32,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w \
 # ───────────────────────────────────────────────
 # Stage 2 – tiny runtime image
 # ───────────────────────────────────────────────
-FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 # The base image can lag the CA bundle; take the current one, which drops
 # the compromised eMudhra (emSign) intermediates.
 RUN apk upgrade --no-cache ca-certificates-bundle
